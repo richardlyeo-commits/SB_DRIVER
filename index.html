@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261120-05
+  버전 : v20261120-06
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261120-05 = 2026년 11월 20일에 다섯 번째로 고친 버전)
+   예) v20261120-06 = 2026년 11월 20일에 여섯 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -150,7 +150,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-05</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-06</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -169,40 +169,46 @@
       <div>
         <label>날짜 <span class="hint">필수</span></label>
         <div class="seg">
-          <input type="text" id="f_yy" maxlength="2" inputmode="numeric" placeholder="26">
+          <input type="text" id="f_yy" maxlength="2" inputmode="numeric" placeholder="26" onfocus="this.select()">
           <span class="sep">.</span>
-          <input type="text" id="f_mm" maxlength="2" inputmode="numeric" placeholder="11">
+          <input type="text" id="f_mm" maxlength="2" inputmode="numeric" placeholder="11" onfocus="this.select()">
           <span class="sep">.</span>
-          <input type="text" id="f_dd" maxlength="2" inputmode="numeric" placeholder="20">
+          <input type="text" id="f_dd" maxlength="2" inputmode="numeric" placeholder="20" onfocus="this.select()">
         </div>
         <div class="preview" id="date_preview"></div>
       </div>
       <div id="wrap_time">
         <label>시간 <span class="hint">사건류만 필수</span></label>
         <div class="seg">
-          <input type="text" id="f_hh" maxlength="2" inputmode="numeric" placeholder="14">
+          <input type="text" id="f_hh" maxlength="2" inputmode="numeric" placeholder="14" onfocus="this.select()">
           <span class="sep">:</span>
-          <input type="text" id="f_mi" maxlength="2" inputmode="numeric" placeholder="10">
+          <input type="text" id="f_mi" maxlength="2" inputmode="numeric" placeholder="10" onfocus="this.select()">
         </div>
       </div>
     </div>
 
-    <label>성명 <span class="hint">필수</span></label>
-    <input type="text" id="f_name" placeholder="예: 홍길동">
-
-    <label>구분 <span class="hint">필수</span></label>
-    <select id="f_gubun">
-      <option value="">-- 선택 --</option>
-      <option>사고</option>
-      <option>과태료</option>
-      <option>민원</option>
-      <option>음주(소내)</option>
-      <option>차량고장</option>
-      <option>기타</option>
-      <option>전입</option>
-      <option>전출</option>
-      <option>노선이동</option>
-    </select>
+    <!-- 성명 + 구분을 한 줄에 나란히 : 둘 다 "필수"이고 항상 같이 보이는 짝이라 가로로 붙여도 안전합니다 -->
+    <div class="row2">
+      <div>
+        <label>성명 <span class="hint">필수</span></label>
+        <input type="text" id="f_name" placeholder="예: 홍길동">
+      </div>
+      <div>
+        <label>구분 <span class="hint">필수</span></label>
+        <select id="f_gubun">
+          <option value="">-- 선택 --</option>
+          <option>사고</option>
+          <option>과태료</option>
+          <option>민원</option>
+          <option>음주(소내)</option>
+          <option>차량고장</option>
+          <option>기타</option>
+          <option>전입</option>
+          <option>전출</option>
+          <option>노선이동</option>
+        </select>
+      </div>
+    </div>
 
     <!-- 노선: 전출일 때만 숨김 (사건류 참고용 / 전입·노선이동은 필수) -->
     <div id="wrap_route">
@@ -222,8 +228,17 @@
 
     <!-- 사건류 전용 칸 (전입/전출/노선이동일 때는 자동으로 숨김) -->
     <div id="wrap_event">
-      <label>차량번호 <span class="hint">뒤 4자리</span></label>
-      <input type="text" id="f_car" maxlength="4" inputmode="numeric" placeholder="예: 1194">
+      <!-- 차량번호 + 금액 : 둘 다 짧은 숫자 입력칸이라 한 줄에 나란히 -->
+      <div class="row2">
+        <div>
+          <label>차량번호 <span class="hint">뒤 4자리</span></label>
+          <input type="text" id="f_car" maxlength="4" inputmode="numeric" placeholder="예: 1194">
+        </div>
+        <div>
+          <label>금액(원) <span class="hint">숫자만</span></label>
+          <input type="text" id="f_amount" inputmode="numeric" placeholder="예: 70000">
+        </div>
+      </div>
 
       <div id="wrap_minwon">
         <label>민원 접수처 <span class="hint">민원일 때 필수</span></label>
@@ -243,9 +258,6 @@
 
       <label>위반 내용</label>
       <input type="text" id="f_detail" placeholder="예: 신호위반">
-
-      <label>금액(원) <span class="hint">숫자만</span></label>
-      <input type="text" id="f_amount" inputmode="numeric" placeholder="예: 70000">
     </div>
 
     <!-- 전입 전용 칸 -->
@@ -357,7 +369,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261120-05)
+   기사 사건·전입전출 입력 도구 (v20261120-06)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
