@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기사 사건·전입전출 입력</title>
+<style>
+  /* ===== 색상·기본값 (여기 색만 바꾸면 전체 분위기가 바뀝니다) ===== */
+  :root{
+    --bg:#eef0f6;
+    --card:#ffffff;
+    --primary:#4338ca;      /* 진한 남색 보라 - 버튼·강조색 */
+    --primary-soft:#eef0ff; /* 연한 버전 (배지 배경 등) */
+    --field:#fffaf0;        /* 입력칸 배경 (은은한 아이보리) */
+    --field-border:#e7d9b8;
+    --border:#e3e5ee;
+    --text:#1c2033;
+    --muted:#767b8c;
+    --danger:#dc2626;
+    --danger-soft:#fdecea;
+    --success:#16a34a;
+    --radius:16px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
+    background:var(--bg);
+    margin:0;
+    padding:18px 14px 60px;
+    color:var(--text);
+  }
+  .wrap{ max-width:560px; margin:0 auto; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .topbar h1{ font-size:19px; margin:0; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .badge{ font-size:11px; font-weight:600; color:var(--primary); background:var(--primary-soft); padding:3px 9px; border-radius:999px; }
+  .sync-pill{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted);
+    background:#fff; border:1px solid var(--border); padding:4px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:#c7cad6; flex:none; }
+  .dot.ok{ background:var(--success); }
+  .dot.warn{ background:#d97706; }
+
+  .sub{ font-size:12.5px; color:var(--muted); margin:4px 0 16px 0; line-height:1.6; }
+
+  .card{
+    background:var(--card); border-radius:var(--radius); padding:18px; margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(16,24,40,.05), 0 2px 8px rgba(16,24,40,.06);
+  }
+  .card h2{ font-size:14.5px; color:var(--text); margin:0 0 14px 0; display:flex; align-items:center; gap:7px; }
+  .card h2 .icon{ font-size:16px; }
+
+  label{ display:block; font-size:12.5px; font-weight:600; color:#3a3f52; margin:12px 0 5px 0; }
+  .hint{ font-size:11px; color:var(--muted); font-weight:400; margin-left:5px; }
+
+  input[type=text], select, textarea{
+    width:100%; padding:10px 11px; font-size:15px; border:1px solid var(--field-border);
+    border-radius:10px; background:var(--field); color:var(--text);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(67,56,202,.12);
+  }
+  input:disabled, select:disabled{ background:#f1f1f4; color:#999; }
+
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .hidden{ display:none !important; }
+
+  .seg{ display:flex; align-items:center; gap:5px; }
+  .seg input{ width:100%; text-align:center; font-variant-numeric:tabular-nums; font-size:16px; letter-spacing:1px; padding:10px 0; }
+  .seg .sep{ color:var(--muted); font-weight:600; }
+  .preview{ font-size:12px; color:var(--success); margin-top:5px; min-height:16px; }
+
+  .warn{
+    background:var(--danger-soft); border:1px solid #f5a9a3; color:var(--danger); border-radius:10px;
+    padding:10px 12px; font-size:13px; margin-top:12px; white-space:pre-line;
+  }
+
+  .btnbar{ display:flex; gap:10px; margin-top:18px; }
+  button{ cursor:pointer; border:none; border-radius:11px; font-size:15px; font-weight:700; padding:14px; transition:transform .05s, opacity .15s; }
+  button:active{ transform:scale(.98); }
+  .btn-main{ flex:1; background:var(--primary); color:#fff; }
+  .btn-reset{ background:#eceef5; color:#444; padding:14px 18px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+  th,td{ border-bottom:1px solid var(--border); padding:7px 5px; text-align:left; word-break:break-all; }
+  th{ color:var(--muted); font-weight:600; font-size:11px; }
+
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+  .small-btn{ background:var(--primary-soft); color:var(--primary); padding:8px 13px; font-size:12.5px; border-radius:999px; }
+  .small-btn.danger{ background:var(--danger-soft); color:var(--danger); }
+  .count{ font-size:12px; color:var(--muted); margin-left:auto; }
+
+  .toast{
+    position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#20233a; color:#fff;
+    padding:10px 18px; border-radius:999px; font-size:13.5px; opacity:0; pointer-events:none;
+    transition:opacity .25s; z-index:50; box-shadow:0 4px 14px rgba(0,0,0,.25);
+  }
+  .toast.show{ opacity:1; }
+  .empty{ color:#a2a6b4; font-size:12.5px; padding:8px 0; }
+
+  footer{ text-align:center; font-size:11px; color:#aaa; margin-top:18px; }
+  a{ color:var(--primary); }
+
+  /* ===== 노선별 명단 ===== */
+  .route-block{ margin-bottom:14px; }
+  .route-head{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px; font-weight:700; color:#fff; background:var(--primary);
+    padding:6px 10px; border-radius:8px 8px 0 0;
+  }
+  .route-body{ border:1px solid var(--border); border-top:none; border-radius:0 0 8px 8px; padding:4px 10px; }
+  .route-body .person{ display:flex; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px dashed #eee; }
+  .route-body .person:last-child{ border-bottom:none; }
+  .route-body .person .idx{ color:var(--muted); width:22px; flex:none; }
+  .roster-edit textarea{ min-height:84px; font-size:13px; }
+  .roster-total{ text-align:right; font-size:12.5px; color:var(--muted); margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-03</span></h1>
+  </div>
+  <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
+    <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
+  </div>
+  <div class="sub">
+    매크로 보안 경고 없이 입력하는 화면입니다. 입력 후 <b>[추가]</b>를 누르면 목록에 쌓이고,
+    로그인된 상태라면 다른 컴퓨터에서 열어도 같은 목록이 자동으로 보입니다.
+    다 적은 뒤 <b>[전체 복사]</b> → 엑셀 빈 줄 A칸에 <b>Ctrl+V</b> 하면 끝입니다.
+  </div>
+
+  <!-- ===== 입력 카드 ===== -->
+  <div class="card">
+    <h2><span class="icon">📝</span>입력폼</h2>
+
+    <div class="row2">
+      <div>
+        <label>날짜 <span class="hint">필수</span></label>
+        <div class="seg">
+          <input type="text" id="f_yy" maxlength="2" inputmode="numeric" placeholder="26">
+          <span class="sep">.</span>
+          <input type="text" id="f_mm" maxlength="2" inputmode="numeric" placeholder="11">
+          <span class="sep">.</span>
+          <input type="text" id="f_dd" maxlength="2" inputmode="numeric" placeholder="20">
+        </div>
+        <div class="preview" id="date_preview"></div>
+      </div>
+      <div id="wrap_time">
+        <label>시간 <span class="hint">사건류만 필수</span></label>
+        <div class="seg">
+          <input type="text" id="f_hh" maxlength="2" inputmode="numeric" placeholder="14">
+          <span class="sep">:</span>
+          <input type="text" id="f_mi" maxlength="2" inputmode="numeric" placeholder="10">
+        </div>
+      </div>
+    </div>
+
+    <label>성명 <span class="hint">필수</span></label>
+    <input type="text" id="f_name" placeholder="예: 조주일">
+
+    <label>구분 <span class="hint">필수</span></label>
+    <select id="f_gubun">
+      <option value="">-- 선택 --</option>
+      <option>사고</option>
+      <option>과태료</option>
+      <option>민원</option>
+      <option>음주(소내)</option>
+      <option>차량고장</option>
+      <option>기타</option>
+      <option>전입</option>
+      <option>전출</option>
+      <option>노선이동</option>
+    </select>
+
+    <!-- 노선: 전출일 때만 숨김 (사건류 참고용 / 전입·노선이동은 필수) -->
+    <div id="wrap_route">
+      <label>노선 <span class="hint" id="route_hint">사건류는 참고용</span></label>
+      <select id="f_route">
+        <option value="">-- 선택 --</option>
+        <option>1-1</option>
+        <option>1-5</option>
+        <option>5</option>
+        <option>5-2</option>
+        <option>60-1</option>
+        <option>87</option>
+        <option>똑버스01</option>
+        <option>P9901</option>
+      </select>
+    </div>
+
+    <!-- 사건류 전용 칸 (전입/전출/노선이동일 때는 자동으로 숨김) -->
+    <div id="wrap_event">
+      <label>차량번호 <span class="hint">뒤 4자리</span></label>
+      <input type="text" id="f_car" maxlength="4" inputmode="numeric" placeholder="예: 1194">
+
+      <div id="wrap_minwon">
+        <label>민원 접수처 <span class="hint">민원일 때 필수</span></label>
+        <select id="f_office">
+          <option value="">-- 선택 --</option>
+          <option>관공서-자치단체</option>
+          <option>관공서-경찰서</option>
+          <option>회사</option>
+          <option>전화</option>
+        </select>
+      </div>
+
+      <label>장소 <span class="hint">사건류만 필수</span>
+        <a href="#" id="map_link" onclick="지도보기(); return false;">🗺️ 지도에서 보기</a>
+      </label>
+      <input type="text" id="f_place" placeholder="예: 부곡주민센터 사거리">
+
+      <label>위반 내용</label>
+      <input type="text" id="f_detail" placeholder="예: 신호위반">
+
+      <label>금액(원) <span class="hint">숫자만</span></label>
+      <input type="text" id="f_amount" inputmode="numeric" placeholder="예: 70000">
+    </div>
+
+    <!-- 전입 전용 칸 -->
+    <div id="wrap_personal_car" class="hidden">
+      <label>개인차량번호 <span class="hint">전입일 때만</span></label>
+      <input type="text" id="f_personalcar">
+    </div>
+
+    <label>메모</label>
+    <textarea id="f_memo" rows="2" placeholder="자유롭게 적기"></textarea>
+
+    <div id="warnbox" class="warn hidden"></div>
+
+    <div class="btnbar">
+      <button class="btn-main" onclick="저장하기()">추가</button>
+      <button class="btn-reset" onclick="폼비우기(true)">입력칸 비우기</button>
+    </div>
+  </div>
+
+  <!-- ===== 사건기록 목록 ===== -->
+  <div class="card">
+    <h2><span class="icon">📋</span>사건기록 시트에 붙여넣을 목록</h2>
+    <div class="toolbar">
+      <button class="small-btn" onclick="전체복사('event')">전체 복사</button>
+      <button class="small-btn danger" onclick="전체삭제('event')">목록 비우기</button>
+      <span class="count" id="cnt_event">0건</span>
+    </div>
+    <div id="table_event"></div>
+  </div>
+
+  <!-- ===== 장소별 통계 ===== -->
+  <div class="card">
+    <h2><span class="icon">📍</span>자주 발생하는 장소</h2>
+    <div class="sub" style="margin:0 0 10px 0;">
+      쌓인 사건기록을 장소별로 모아, 많이 나온 순서로 보여줍니다. 장소를 누르면 지도로 바로 연결됩니다.
+    </div>
+    <div id="place_stats"></div>
+  </div>
+
+  <!-- ===== 전입전출 목록 ===== -->
+  <div class="card">
+    <h2><span class="icon">🔄</span>전입전출 시트에 붙여넣을 목록</h2>
+    <div class="toolbar">
+      <button class="small-btn" onclick="전체복사('move')">전체 복사</button>
+      <button class="small-btn danger" onclick="전체삭제('move')">목록 비우기</button>
+      <span class="count" id="cnt_move">0건</span>
+    </div>
+    <div id="table_move"></div>
+  </div>
+
+  <!-- ===== 노선별 기사 명단 ===== -->
+  <div class="card">
+    <h2><span class="icon">📇</span>노선별 기사 명단</h2>
+    <div class="sub" style="margin:0 0 10px 0;">
+      위 입력폼에서 <b>전입 · 전출 · 노선이동</b>을 추가하면 이 명단이 자동으로 바뀌고,
+      이름 가나다순으로 다시 정렬됩니다. 더 이상 손으로 번호를 새로 매기지 않아도 됩니다.
+    </div>
+    <div class="toolbar">
+      <button class="small-btn" onclick="명단편집토글()">✏️ 명단 가져오기 / 통째로 수정</button>
+      <span class="count" id="cnt_roster">0명</span>
+    </div>
+
+    <div id="roster_edit" class="hidden roster-edit">
+      <div class="sub" style="margin-top:0;">
+        엑셀에서 각 노선의 <b>성명 칸만</b> 선택해 복사(Ctrl+C)한 뒤, 아래 그 노선 칸에
+        붙여넣기(Ctrl+V) 하세요. 한 줄에 한 명씩 들어가면 됩니다.
+        다 채운 뒤 <b>[명단 전체 적용]</b>을 누르면 <u>지금 명단 전체가 이 내용으로 바뀝니다</u>
+        (처음 한 번 전체 명단을 넣을 때, 또는 명단을 통째로 다시 맞출 때만 쓰세요.
+        평소에는 위 입력폼의 전입·전출·노선이동만 쓰시면 됩니다).
+      </div>
+      <div id="roster_textareas"></div>
+      <div class="btnbar">
+        <button class="btn-main" onclick="명단전체적용()">명단 전체 적용</button>
+        <button class="btn-reset" onclick="명단편집토글()">닫기</button>
+      </div>
+    </div>
+
+    <div id="roster_list"></div>
+    <div class="roster-total" id="roster_total"></div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <footer>
+    매크로 보안 경고 없이 쓰는 입력 화면 · 로그인 상태에서는 컴퓨터가 달라도 같은 목록이 자동으로 모입니다.
+  </footer>
+</div>
+
+<script>
+/* ===================================================================
+   기사 사건·전입전출 입력 도구 (v20261120-03)
+   - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
+   - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
+     로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
+     같은 목록이 자동으로 보입니다.
+   - 이번 버전부터 "노선별 기사 명단"을 함께 관리합니다. 전입/노선이동을
+     추가하면 그 사람이 해당 노선 명단에 자동으로 들어가고(이미 있으면
+     노선만 바뀜), 전출을 추가하면 명단에서 자동으로 빠집니다. 명단은
+     항상 이름 가나다순으로 다시 정렬되어 보입니다.
+   - db를 쓸 수 없는 상황(로그인 안 됨 등)이면, 이 화면을 쓰는 동안만
+     임시로 기억해 두는 방식으로 자동 전환됩니다.
+   - 엑셀 파일 자체를 이 화면이 직접 수정하지는 못합니다. 목록을
+     복사해서 엑셀에 붙여넣는 마지막 한 단계만 손으로 해주시면 됩니다.
+   =================================================================== */
+
+const $ = (id) => document.getElementById(id);
+
+// 노선 목록 (입력폼 드롭다운, 명단 편집칸에 같이 씀)
+const ROUTES = ['1-1','1-5','5','5-2','60-1','87','똑버스01','P9901'];
+
+// 화면에 보여줄 목록들 (db에서 받아오거나, db가 없으면 이 화면 안에서만 임시로 씀)
+let 사건목록 = [];
+let 전입목록 = [];
+let 로스터목록 = [];     // { id, 성명, 노선 }
+let db = null;
+let db사용가능 = false;
+
+// ===================================================================
+// 1) 공용 저장소(db) 연결
+// ===================================================================
+(async function db연결(){
+  if (!window.claude || typeof window.claude.use !== 'function'){
+    동기화상태표시(false, '이 화면 혼자서만 임시 저장됩니다.');
+    return;
+  }
+  try{ db = await window.claude.use('db'); }catch(e){ db = null; }
+
+  if (!db){
+    동기화상태표시(false, '로그인 상태가 아니라 이 화면에만 임시 저장됩니다.');
+    return;
+  }
+
+  db사용가능 = true;
+  동기화상태표시(true, '실시간으로 저장 · 동기화 중');
+
+  try{
+    db.collection('event_records').onSnapshot((snap) => {
+      사건목록 = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.created||0) - (b.created||0));
+      그리기();
+    });
+    db.collection('move_records').onSnapshot((snap) => {
+      전입목록 = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.created||0) - (b.created||0));
+      그리기();
+    });
+    db.collection('roster').onSnapshot((snap) => {
+      로스터목록 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      로스터그리기();
+    });
+  }catch(e){
+    db사용가능 = false;
+    동기화상태표시(false, '자동 동기화 연결에 실패했습니다. 이 화면에만 임시 저장됩니다.');
+  }
+})();
+
+function 동기화상태표시(연결됨, 문구){
+  $('sync_dot').className = 'dot' + (연결됨 ? ' ok' : ' warn');
+  $('sync_text').textContent = 문구;
+}
+
+// ===================================================================
+// 2) 날짜 / 시간 세그먼트 입력
+// ===================================================================
+const 날짜칸 = ['f_yy','f_mm','f_dd'];
+const 시간칸 = ['f_hh','f_mi'];
+
+(function 날짜초기화(){
+  const 오늘 = new Date();
+  $('f_yy').value = String(오늘.getFullYear()).slice(2);
+  $('f_mm').value = String(오늘.getMonth()+1).padStart(2,'0');
+  $('f_dd').value = String(오늘.getDate()).padStart(2,'0');
+  날짜미리보기();
+})();
+
+function 세그먼트연결(아이디목록){
+  아이디목록.forEach((id, i) => {
+    const el = $(id);
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/[^0-9]/g, '').slice(0,2);
+      if (id === 'f_yy' || id === 'f_mm' || id === 'f_dd') 날짜미리보기();
+      if (el.value.length === 2 && i < 아이디목록.length - 1){
+        $(아이디목록[i+1]).focus();
+        $(아이디목록[i+1]).select();
+      } else if (el.value.length === 2 && i === 아이디목록.length - 1){
+        다음칸으로(id);
+      }
+    });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && el.value === '' && i > 0){ $(아이디목록[i-1]).focus(); }
+    });
+  });
+}
+세그먼트연결(날짜칸);
+세그먼트연결(시간칸);
+
+function 날짜미리보기(){
+  const 결과 = 날짜값가져오기();
+  $('date_preview').textContent = 결과.ok ? ('→ ' + 결과.iso) : '';
+}
+
+function 날짜값가져오기(){
+  const yy = $('f_yy').value.trim(), mm = $('f_mm').value.trim(), dd = $('f_dd').value.trim();
+  if (yy === '' && mm === '' && dd === '') return { empty:true, ok:false };
+  if (yy.length !== 2 || mm.length !== 2 || dd.length !== 2) return { empty:false, ok:false };
+  const mmN = parseInt(mm,10), ddN = parseInt(dd,10);
+  if (mmN < 1 || mmN > 12 || ddN < 1 || ddN > 31) return { empty:false, ok:false };
+  return { empty:false, ok:true, iso: `20${yy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}` };
+}
+
+function 시간값가져오기(){
+  const hh = $('f_hh').value.trim(), mi = $('f_mi').value.trim();
+  if (hh === '' && mi === '') return { empty:true, ok:false };
+  if (hh === '' || mi === '') return { empty:false, ok:false };
+  const hhN = parseInt(hh,10), miN = parseInt(mi,10);
+  if (isNaN(hhN) || isNaN(miN) || hhN > 23 || miN > 59) return { empty:false, ok:false };
+  return { empty:false, ok:true, hhmm: `${String(hhN).padStart(2,'0')}:${String(miN).padStart(2,'0')}` };
+}
+
+// ===================================================================
+// 3) 구분 선택에 따라 칸 보이기/숨기기
+// ===================================================================
+$('f_gubun').addEventListener('change', 구분바뀜);
+function 구분바뀜(){
+  const 구분 = $('f_gubun').value;
+  const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
+
+  // 사건 전용 칸(차량번호·민원접수처·장소·위반내용·금액, 시간)은 인사이동류면 숨김
+  $('wrap_event').classList.toggle('hidden', 인사이동);
+  $('wrap_time').classList.toggle('hidden', 인사이동);
+
+  // 노선 칸: 전출만 숨김 (전출은 명단에서 빼기만 하면 되므로 노선이 필요 없음)
+  $('wrap_route').classList.toggle('hidden', 구분 === '전출');
+  $('route_hint').textContent = (구분 === '전입' || 구분 === '노선이동') ? '필수' : '사건류는 참고용';
+
+  $('wrap_personal_car').classList.toggle('hidden', 구분 !== '전입');
+  $('wrap_minwon').classList.toggle('hidden', 구분 !== '민원');
+}
+
+function 비었나(값){ return !값 || String(값).trim() === ''; }
+
+// ===================================================================
+// 4) [추가] 버튼
+// ===================================================================
+function 저장하기(){
+  const 성명 = $('f_name').value.trim();
+  const 구분 = $('f_gubun').value;
+  const 노선 = $('f_route').value;
+  const 차량 = $('f_car').value.trim();
+  const 접수처 = $('f_office').value;
+  const 장소 = $('f_place').value.trim();
+  const 위반 = $('f_detail').value.trim();
+  const 금액 = $('f_amount').value.trim();
+  const 개인차량 = $('f_personalcar').value.trim();
+  const 메모 = $('f_memo').value.trim();
+
+  const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
+  let 빠짐 = [];
+
+  const 날짜결과 = 날짜값가져오기();
+  const 시간결과 = 시간값가져오기();
+
+  if (날짜결과.empty) 빠짐.push('날짜');
+  else if (!날짜결과.ok) 빠짐.push('날짜(년·월·일 두 자리씩)');
+
+  if (비었나(성명)) 빠짐.push('성명');
+  if (비었나(구분)) 빠짐.push('구분');
+
+  if (!인사이동){
+    if (시간결과.empty) 빠짐.push('시간');
+    else if (!시간결과.ok) 빠짐.push('시간(시·분 두 자리씩)');
+    if (비었나(장소)) 빠짐.push('장소');
+    if (구분 === '민원' && 비었나(접수처)) 빠짐.push('민원 접수처');
+  }
+  if ((구분 === '전입' || 구분 === '노선이동') && 비었나(노선)) 빠짐.push('노선');
+  if (!비었나(차량) && !/^\d{4}$/.test(차량)) 빠짐.push('차량번호(숫자 4자리)');
+  if (!비었나(금액) && !/^\d+$/.test(금액)) 빠짐.push('금액(숫자만)');
+
+  if (빠짐.length > 0){
+    $('warnbox').textContent = '다음 항목을 확인하세요 : ' + 빠짐.join(', ');
+    $('warnbox').classList.remove('hidden');
+    return;
+  }
+  $('warnbox').classList.add('hidden');
+
+  const 날짜 = 날짜결과.iso;
+  const 시간 = 시간결과.ok ? 시간결과.hhmm : '';
+
+  if (구분 === '전입' || 구분 === '전출'){
+    // 전입·전출은 기존 엑셀 '전입전출' 시트 칸과 똑같이 기록해 둠
+    const 기록 = { 날짜, 성명, 구분, 개인차량: (구분==='전입' ? 개인차량 : ''), 메모, created: Date.now() };
+    목록추가('move', 기록);
+  } else if (!인사이동){
+    const 기록 = {
+      발생일시: `${날짜} ${시간}`, 성명, 노선, 차량, 구분,
+      접수처: (구분==='민원' ? 접수처 : ''), 장소, 위반, 금액, 메모, created: Date.now()
+    };
+    목록추가('event', 기록);
+  }
+  // '노선이동'은 엑셀 '전입전출' 시트에 해당 칸이 없어서 목록에는 남기지 않고, 명단만 바꿉니다.
+
+  // ----- 명단(로스터) 자동 갱신 -----
+  if (구분 === '전입' || 구분 === '노선이동'){
+    로스터_추가수정(성명, 노선);
+  } else if (구분 === '전출'){
+    로스터_삭제(성명);
+  }
+
+  알림('추가되었습니다. 계속 입력하거나 "전체 복사" 후 엑셀에 붙여넣으세요.');
+  폼비우기(false);
+}
+
+function 목록추가(종류, 기록){
+  const 컬렉션 = (종류 === 'event') ? 'event_records' : 'move_records';
+  if (db사용가능){
+    try{ db.collection(컬렉션).doc().set(기록); return; }
+    catch(e){ 동기화상태표시(false, '저장 중 오류가 있어 이 화면에만 임시 저장됩니다.'); }
+  }
+  const 임시id = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  if (종류 === 'event') 사건목록.push({ id:임시id, ...기록 });
+  else 전입목록.push({ id:임시id, ...기록 });
+  그리기();
+}
+
+function 폼비우기(알려줄지){
+  ['f_hh','f_mi','f_name','f_route','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_memo']
+    .forEach(id => $(id).value = '');
+  $('f_gubun').value = '';
+  구분바뀜();
+  $('warnbox').classList.add('hidden');
+  $('f_name').focus();
+  if (알려줄지) 알림('입력칸을 비웠습니다.');
+}
+
+// ===================================================================
+// 5) 사건기록 / 전입전출 목록 표시
+// ===================================================================
+const 이벤트필드 = ['발생일시','성명','노선','차량','구분','접수처','장소','위반','금액','메모'];
+const 이동필드   = ['날짜','성명','구분','개인차량','메모'];
+
+function 그리기(){
+  그리기_표('event', 사건목록, 이벤트필드);
+  그리기_표('move',  전입목록, 이동필드);
+  통계그리기();
+}
+
+function 그리기_표(종류, 목록, 필드){
+  const 칸 = $('table_' + 종류);
+  $('cnt_' + 종류).textContent = 목록.length + '건';
+  if (목록.length === 0){ 칸.innerHTML = '<div class="empty">아직 추가된 항목이 없습니다.</div>'; return; }
+  let html = '<table><tr><th>#</th>';
+  필드.forEach(f => html += `<th>${f}</th>`);
+  html += '<th></th></tr>';
+  목록.forEach((항목, idx) => {
+    html += `<tr><td>${idx+1}</td>`;
+    필드.forEach(f => html += `<td>${항목[f] || ''}</td>`);
+    html += `<td><button class="small-btn danger" style="padding:4px 9px;font-size:11px"
+              onclick="한줄삭제('${종류}', '${항목.id}')">삭제</button></td></tr>`;
+  });
+  html += '</table>';
+  칸.innerHTML = html;
+}
+
+function 한줄삭제(종류, id){
+  const 컬렉션 = (종류 === 'event') ? 'event_records' : 'move_records';
+  if (db사용가능 && !String(id).startsWith('local-')){
+    try{ db.doc(컬렉션 + '/' + id).delete(); return; }catch(e){}
+  }
+  if (종류 === 'event') 사건목록 = 사건목록.filter(x => x.id !== id);
+  else 전입목록 = 전입목록.filter(x => x.id !== id);
+  그리기();
+}
+
+function 전체삭제(종류){
+  const 이름 = (종류==='event') ? '사건기록' : '전입전출';
+  if (!confirm(이름 + ' 목록을 전부 지울까요? 엑셀에 붙여넣기 전이라면 지우지 마세요.')) return;
+  const 목록 = (종류==='event') ? 사건목록 : 전입목록;
+  const 컬렉션 = (종류==='event') ? 'event_records' : 'move_records';
+  if (db사용가능){
+    목록.forEach(항목 => { if (!String(항목.id).startsWith('local-')){ try{ db.doc(컬렉션 + '/' + 항목.id).delete(); }catch(e){} } });
+  }
+  if (종류 === 'event') 사건목록 = [];
+  else 전입목록 = [];
+  그리기();
+}
+
+// ===================================================================
+// 6) 장소별 통계
+// ===================================================================
+function 지도주소(장소){ return 'https://map.kakao.com/link/search/' + encodeURIComponent(장소); }
+
+function 지도보기(){
+  const 장소 = $('f_place').value.trim();
+  if (!장소){ 알림('장소를 먼저 입력하세요.'); return; }
+  window.open(지도주소(장소), '_blank');
+}
+
+function 통계그리기(){
+  const 칸 = $('place_stats');
+  const 집계 = {};
+  사건목록.forEach(항목 => {
+    const 장소 = (항목.장소 || '').trim();
+    if (!장소) return;
+    if (!집계[장소]) 집계[장소] = { 건수:0, 구분들:{} };
+    집계[장소].건수++;
+    const 구분 = 항목.구분 || '기타';
+    집계[장소].구분들[구분] = (집계[장소].구분들[구분] || 0) + 1;
+  });
+  const 목록 = Object.keys(집계).map(장소 => ({ 장소, ...집계[장소] })).sort((a,b) => b.건수 - a.건수);
+  if (목록.length === 0){ 칸.innerHTML = '<div class="empty">아직 쌓인 사건기록이 없습니다.</div>'; return; }
+  const 최대 = 목록[0].건수;
+  let html = '';
+  목록.slice(0,10).forEach(항목 => {
+    const 비율 = Math.round((항목.건수 / 최대) * 100);
+    const 구분요약 = Object.entries(항목.구분들).map(([k,v]) => `${k} ${v}`).join(', ');
+    html += `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <a href="${지도주소(항목.장소)}" target="_blank" style="font-weight:700; text-decoration:none;">${항목.장소}</a>
+          <span><b>${항목.건수}건</b> <span style="color:var(--muted);">(${구분요약})</span></span>
+        </div>
+        <div style="background:#eef0f6; border-radius:5px; height:7px;">
+          <div style="background:var(--primary); width:${비율}%; height:7px; border-radius:5px;"></div>
+        </div>
+      </div>`;
+  });
+  칸.innerHTML = html;
+}
+
+// ===================================================================
+// 7) 엑셀로 복사
+// ===================================================================
+function 전체복사(종류){
+  const 목록 = (종류 === 'event') ? 사건목록 : 전입목록;
+  const 필드 = (종류 === 'event') ? 이벤트필드 : 이동필드;
+  if (목록.length === 0){ 알림('복사할 내용이 없습니다.'); return; }
+  const 글자 = 목록.map(항목 => 필드.map(f => 항목[f] || '').join('\t')).join('\n');
+  navigator.clipboard.writeText(글자).then(()=>{
+    알림(목록.length + '건이 복사되었습니다. 엑셀 빈 줄 A칸을 클릭하고 Ctrl+V 하세요.');
+  }).catch(()=>{
+    const 임시 = document.createElement('textarea');
+    임시.value = 글자;
+    document.body.appendChild(임시);
+    임시.select();
+    document.execCommand('copy');
+    document.body.removeChild(임시);
+    알림('복사되었습니다. 엑셀에 붙여넣으세요.');
+  });
+}
+
+let 알림타이머;
+function 알림(문구){
+  const t = $('toast');
+  t.textContent = 문구;
+  t.classList.add('show');
+  clearTimeout(알림타이머);
+  알림타이머 = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+// ===================================================================
+// 8) 노선별 기사 명단
+// ===================================================================
+
+// 전입/노선이동: 이미 명단에 있는 이름이면 노선만 바꾸고, 없으면 새로 추가
+function 로스터_추가수정(성명, 노선){
+  const 기존 = 로스터목록.filter(x => x.성명 === 성명);
+  if (db사용가능){
+    if (기존.length > 0) 기존.forEach(x => { try{ db.doc('roster/' + x.id).update({ 노선 }); }catch(e){} });
+    else { try{ db.collection('roster').doc().set({ 성명, 노선 }); }catch(e){} }
+  } else {
+    if (기존.length > 0) 기존.forEach(x => x.노선 = 노선);
+    else 로스터목록.push({ id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), 성명, 노선 });
+    로스터그리기();
+  }
+}
+
+// 전출: 명단에서 그 이름을 빼 버림
+function 로스터_삭제(성명){
+  const 기존 = 로스터목록.filter(x => x.성명 === 성명);
+  if (기존.length === 0) return;
+  if (db사용가능){
+    기존.forEach(x => { try{ db.doc('roster/' + x.id).delete(); }catch(e){} });
+  } else {
+    로스터목록 = 로스터목록.filter(x => x.성명 !== 성명);
+    로스터그리기();
+  }
+}
+
+function 로스터그리기(){
+  const 칸 = $('roster_list');
+  $('cnt_roster').textContent = 로스터목록.length + '명';
+  $('roster_total').textContent = '총 ' + 로스터목록.length + '명';
+
+  if (로스터목록.length === 0){
+    칸.innerHTML = '<div class="empty">아직 명단이 없습니다. 위 [✏️ 명단 가져오기] 버튼으로 처음 명단을 넣어주세요.</div>';
+    return;
+  }
+
+  let html = '';
+  ROUTES.forEach(노선 => {
+    const 사람들 = 로스터목록
+      .filter(x => x.노선 === 노선)
+      .sort((a,b) => a.성명.localeCompare(b.성명, 'ko'));
+    if (사람들.length === 0) return;
+    html += `<div class="route-block">
+      <div class="route-head"><span>${노선}번</span><span>${사람들.length}명</span></div>
+      <div class="route-body">`;
+    사람들.forEach((p, idx) => {
+      html += `<div class="person"><span class="idx">${idx+1}</span><span>${p.성명}</span></div>`;
+    });
+    html += `</div></div>`;
+  });
+  칸.innerHTML = html || '<div class="empty">노선이 지정된 기사가 없습니다.</div>';
+}
+
+// 명단 가져오기/수정 패널 열고 닫기 (열 때마다 현재 명단 값으로 칸을 채워 둠)
+function 명단편집토글(){
+  const 패널 = $('roster_edit');
+  const 열릴예정 = 패널.classList.contains('hidden');
+  if (열릴예정){
+    let html = '';
+    ROUTES.forEach(노선 => {
+      const 이름들 = 로스터목록.filter(x => x.노선 === 노선).sort((a,b) => a.성명.localeCompare(b.성명,'ko')).map(x => x.성명);
+      html += `<label>${노선}번 <span class="hint">${이름들.length}명</span></label>
+        <textarea id="roster_ta_${노선}" rows="4" placeholder="한 줄에 한 명씩">${이름들.join('\n')}</textarea>`;
+    });
+    $('roster_textareas').innerHTML = html;
+  }
+  패널.classList.toggle('hidden');
+}
+
+// 명단 전체 적용: 지금 텍스트칸 내용으로 로스터 컬렉션 전체를 바꿔치기함
+function 명단전체적용(){
+  const 새명단 = [];
+  ROUTES.forEach(노선 => {
+    const 글 = $('roster_ta_' + 노선).value;
+    글.split('\n').map(s => s.trim()).filter(s => s !== '').forEach(성명 => {
+      새명단.push({ 성명, 노선 });
+    });
+  });
+
+  if (!confirm('지금 명단 ' + 로스터목록.length + '명을 지우고, 새로 입력한 ' + 새명단.length + '명으로 바꿀까요?')) return;
+
+  if (db사용가능){
+    // 기존 명단을 전부 지우고
+    로스터목록.forEach(x => { try{ db.doc('roster/' + x.id).delete(); }catch(e){} });
+    // 새 명단을 하나씩 추가
+    새명단.forEach(x => { try{ db.collection('roster').doc().set(x); }catch(e){} });
+  } else {
+    로스터목록 = 새명단.map(x => ({ id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), ...x }));
+    로스터그리기();
+  }
+  명단편집토글();
+  알림('명단이 적용되었습니다.');
+}
+
+// ===================================================================
+// 9) Enter 키로 다음 칸 이동
+// ===================================================================
+const 입력순서 = ['f_yy','f_mm','f_dd','f_hh','f_mi','f_name','f_gubun','f_route','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_memo'];
+
+function 보이는가(id){
+  let 노드 = $(id);
+  if (!노드) return false;
+  while (노드 && 노드 !== document.body){
+    if (노드.classList && 노드.classList.contains('hidden')) return false;
+    노드 = 노드.parentElement;
+  }
+  return true;
+}
+
+function 다음칸으로(현재id){
+  const idx = 입력순서.indexOf(현재id);
+  for (let i = idx + 1; i < 입력순서.length; i++){
+    if (보이는가(입력순서[i])){ $(입력순서[i]).focus(); return; }
+  }
+  저장하기();
+}
+
+입력순서.forEach(id => {
+  $(id).addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if (id === 'f_memo' && e.shiftKey) return;
+    e.preventDefault();
+    다음칸으로(id);
+  });
+});
+
+// 처음 화면을 한 번 그려둠
+그리기();
+로스터그리기();
+</script>
+</body>
+</html>
