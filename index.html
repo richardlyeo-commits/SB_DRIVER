@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261120-06
+  버전 : v20261120-07
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261120-06 = 2026년 11월 20일에 여섯 번째로 고친 버전)
+   예) v20261120-07 = 2026년 11월 20일에 일곱 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -127,6 +127,8 @@
   .route-body .person:last-child{ border-bottom:none; }
   .route-body .person .idx{ color:var(--muted); width:22px; flex:none; }
   .roster-edit textarea{ min-height:84px; font-size:13px; }
+  /* 노선별 명단 가져오기 칸도 세로로 쭉 늘어놓지 않고 두 개씩 가로로 */
+  #roster_textareas{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
   .roster-total{ text-align:right; font-size:12.5px; color:var(--muted); margin-top:4px; }
 
   /* ===== 확인 팝업(모달) =====
@@ -150,7 +152,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-06</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-07</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -210,20 +212,37 @@
       </div>
     </div>
 
-    <!-- 노선: 전출일 때만 숨김 (사건류 참고용 / 전입·노선이동은 필수) -->
-    <div id="wrap_route">
-      <label>노선 <span class="hint" id="route_hint">사건류는 참고용</span></label>
-      <select id="f_route">
-        <option value="">-- 선택 --</option>
-        <option>1-1</option>
-        <option>1-5</option>
-        <option>5</option>
-        <option>5-2</option>
-        <option>60-1</option>
-        <option>87</option>
-        <option>똑버스01</option>
-        <option>P9901</option>
-      </select>
+    <!-- 노선 + 민원 접수처 : 한 줄에 나란히.
+         (노선은 전출일 때만 숨김 / 민원 접수처는 '민원'일 때만 보임 —
+          서로 숨는 조건은 다르지만, 둘 다 '선택' 칸이라 같이 묶어도
+          화면이 지저분해지지 않습니다. 평소엔 노선만 보이고,
+          민원을 고르면 그 옆에 민원 접수처가 같이 나타납니다.) -->
+    <div class="row2">
+      <div id="wrap_route">
+        <label>노선 <span class="hint" id="route_hint">사건류는 참고용</span></label>
+        <select id="f_route">
+          <option value="">-- 선택 --</option>
+          <option>1-1</option>
+          <option>1-5</option>
+          <option>5</option>
+          <option>5-2</option>
+          <option>60-1</option>
+          <option>87</option>
+          <option>똑버스01</option>
+          <option>P9901</option>
+        </select>
+      </div>
+
+      <div id="wrap_minwon">
+        <label>민원 접수처 <span class="hint">민원일 때 필수</span></label>
+        <select id="f_office">
+          <option value="">-- 선택 --</option>
+          <option>관공서-자치단체</option>
+          <option>관공서-경찰서</option>
+          <option>회사</option>
+          <option>전화</option>
+        </select>
+      </div>
     </div>
 
     <!-- 사건류 전용 칸 (전입/전출/노선이동일 때는 자동으로 숨김) -->
@@ -240,24 +259,19 @@
         </div>
       </div>
 
-      <div id="wrap_minwon">
-        <label>민원 접수처 <span class="hint">민원일 때 필수</span></label>
-        <select id="f_office">
-          <option value="">-- 선택 --</option>
-          <option>관공서-자치단체</option>
-          <option>관공서-경찰서</option>
-          <option>회사</option>
-          <option>전화</option>
-        </select>
+      <!-- 장소 + 위반 내용 : 사건류일 땐 둘 다 항상 같이 보이는 짝이라 한 줄로 -->
+      <div class="row2">
+        <div>
+          <label>장소 <span class="hint">사건류만 필수</span>
+            <a href="#" id="map_link" onclick="지도보기(); return false;">🗺️ 지도</a>
+          </label>
+          <input type="text" id="f_place" placeholder="예: 부곡주민센터 사거리">
+        </div>
+        <div>
+          <label>위반 내용</label>
+          <input type="text" id="f_detail" placeholder="예: 신호위반">
+        </div>
       </div>
-
-      <label>장소 <span class="hint">사건류만 필수</span>
-        <a href="#" id="map_link" onclick="지도보기(); return false;">🗺️ 지도에서 보기</a>
-      </label>
-      <input type="text" id="f_place" placeholder="예: 부곡주민센터 사거리">
-
-      <label>위반 내용</label>
-      <input type="text" id="f_detail" placeholder="예: 신호위반">
     </div>
 
     <!-- 전입 전용 칸 -->
@@ -369,7 +383,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261120-06)
+   기사 사건·전입전출 입력 도구 (v20261120-07)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -853,8 +867,11 @@ function 명단편집토글(){
     let html = '';
     ROUTES.forEach(노선 => {
       const 이름들 = 로스터목록.filter(x => x.노선 === 노선).sort((a,b) => a.성명.localeCompare(b.성명,'ko')).map(x => x.성명);
-      html += `<label>${노선}번 <span class="hint">${이름들.length}명</span></label>
-        <textarea id="roster_ta_${노선}" rows="4" placeholder="한 줄에 한 명씩">${이름들.join('\n')}</textarea>`;
+      // 노선별 칸을 하나의 묶음(div)으로 감싸서, 두 개씩 가로로 나란히 배치되게 함
+      html += `<div>
+        <label>${노선}번 <span class="hint">${이름들.length}명</span></label>
+        <textarea id="roster_ta_${노선}" rows="4" placeholder="한 줄에 한 명씩">${이름들.join('\n')}</textarea>
+      </div>`;
     });
     $('roster_textareas').innerHTML = html;
   }
