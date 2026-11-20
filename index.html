@@ -122,7 +122,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-03</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-04</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -237,6 +237,16 @@
     </div>
   </div>
 
+  <!-- ===== 기사별 보기 ===== -->
+  <div class="card">
+    <h2><span class="icon">🔍</span>기사별 보기</h2>
+    <div class="sub" style="margin:0 0 10px 0;">
+      이름을 입력하면 그 기사의 현재 노선과, 지금까지 쌓인 사건·민원·인사이동 이력을 한 번에 모아 보여줍니다.
+    </div>
+    <input type="text" id="f_search" placeholder="기사 이름을 입력하세요">
+    <div id="search_result"></div>
+  </div>
+
   <!-- ===== 사건기록 목록 ===== -->
   <div class="card">
     <h2><span class="icon">📋</span>사건기록 시트에 붙여넣을 목록</h2>
@@ -308,7 +318,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261120-03)
+   기사 사건·전입전출 입력 도구 (v20261120-04)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -560,6 +570,40 @@ function 그리기(){
   그리기_표('event', 사건목록, 이벤트필드);
   그리기_표('move',  전입목록, 이동필드);
   통계그리기();
+  기사별그리기();
+}
+
+// 이름 하나를 검색해서, 그 사람의 현재 노선 + 사건/인사 이력을 전부 모아 보여줌
+$('f_search').addEventListener('input', 기사별그리기);
+function 기사별그리기(){
+  const 이름 = $('f_search').value.trim();
+  const 칸 = $('search_result');
+  if (!이름){ 칸.innerHTML = ''; return; }
+
+  const 현재 = 로스터목록.find(x => x.성명 === 이름);
+  const 사건들 = 사건목록.filter(x => x.성명 === 이름).sort((a,b) => (a.created||0) - (b.created||0));
+  const 이동들 = 전입목록.filter(x => x.성명 === 이름).sort((a,b) => (a.created||0) - (b.created||0));
+
+  if (!현재 && 사건들.length === 0 && 이동들.length === 0){
+    칸.innerHTML = '<div class="empty">일치하는 기록이 없습니다.</div>';
+    return;
+  }
+
+  let html = `<div style="margin:12px 0 8px; font-size:13.5px;"><b>${이름}</b>`;
+  html += 현재 ? ` · 현재 <b>${현재.노선}번</b> 노선` : ' · 현재 명단에 없음';
+  html += `</div>`;
+
+  if (이동들.length > 0){
+    html += '<div class="hint" style="margin-bottom:4px;">인사 이력</div><table><tr><th>날짜</th><th>구분</th><th>메모</th></tr>';
+    이동들.forEach(x => html += `<tr><td>${x.날짜||''}</td><td>${x.구분||''}</td><td>${x.메모||''}</td></tr>`);
+    html += '</table>';
+  }
+  if (사건들.length > 0){
+    html += '<div class="hint" style="margin:10px 0 4px;">사건·민원 이력 (' + 사건들.length + '건)</div><table><tr><th>일시</th><th>구분</th><th>장소</th><th>내용</th></tr>';
+    사건들.forEach(x => html += `<tr><td>${x.발생일시||''}</td><td>${x.구분||''}</td><td>${x.장소||''}</td><td>${x.위반||''}</td></tr>`);
+    html += '</table>';
+  }
+  칸.innerHTML = html;
 }
 
 function 그리기_표(종류, 목록, 필드){
