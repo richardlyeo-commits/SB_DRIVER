@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261120-07
+  버전 : v20261124-01
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261120-07 = 2026년 11월 20일에 일곱 번째로 고친 버전)
+   예) v20261124-01 = 2026년 11월 24일에 첫 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -126,6 +126,18 @@
   .route-body .person{ display:flex; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px dashed #eee; }
   .route-body .person:last-child{ border-bottom:none; }
   .route-body .person .idx{ color:var(--muted); width:22px; flex:none; }
+  /* ===== 구분 선택 버튼 ===== */
+  .gubun-group-title{ font-size:11.5px; color:var(--muted); font-weight:600; margin:12px 0 6px 0; }
+  .gubun-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .gubun-grid3{ grid-template-columns:repeat(3, 1fr); }
+  .gubun-btn{
+    background:#eceef5; color:#444; border:1.5px solid transparent;
+    padding:13px 6px; border-radius:11px; font-size:13.5px; font-weight:700;
+    cursor:pointer; transition:background .12s, color .12s, transform .05s;
+  }
+  .gubun-btn:active{ transform:scale(.97); }
+  .gubun-btn.active{ background:var(--primary); color:#fff; }
+
   .roster-edit textarea{ min-height:84px; font-size:13px; }
   /* 노선별 명단 가져오기 칸도 세로로 쭉 늘어놓지 않고 두 개씩 가로로 */
   #roster_textareas{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
@@ -152,7 +164,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-07</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-01</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -166,6 +178,39 @@
   <!-- ===== 입력 카드 ===== -->
   <div class="card">
     <h2><span class="icon">📝</span>입력폼</h2>
+
+    <!-- ===== 구분 선택 (맨 위) =====
+         예전에는 드롭다운(select) 목록 중 하나를 고르는 방식이었는데,
+         이제는 버튼을 바로 누르는 방식입니다. 버튼을 누르면:
+           1) 숨겨둔 f_gubun 칸(화면엔 안 보임)에 그 값을 저장하고
+           2) 누른 버튼만 진하게 표시하고
+           3) 기존에 쓰던 구분바뀜() 함수를 그대로 실행해서
+              그 아래 입력칸들을 보이거나 숨깁니다.
+         => 즉 "무엇을 골랐는지 저장하고 화면을 바꾸는" 역할은 그대로이고,
+            고르는 방법만 드롭다운 → 버튼으로 바뀐 것입니다. -->
+    <label>구분 <span class="hint">필수 · 먼저 선택하세요</span></label>
+    <input type="hidden" id="f_gubun" value="">
+
+    <div class="gubun-group-title">사건류</div>
+    <div class="gubun-grid">
+      <button type="button" class="gubun-btn" data-v="사고" onclick="구분선택('사고')">사고</button>
+      <button type="button" class="gubun-btn" data-v="과태료" onclick="구분선택('과태료')">과태료</button>
+      <button type="button" class="gubun-btn" data-v="민원" onclick="구분선택('민원')">민원</button>
+      <button type="button" class="gubun-btn" data-v="음주(소내)" onclick="구분선택('음주(소내)')">음주(소내)</button>
+      <button type="button" class="gubun-btn" data-v="차량고장" onclick="구분선택('차량고장')">차량고장</button>
+      <button type="button" class="gubun-btn" data-v="기타" onclick="구분선택('기타')">기타</button>
+    </div>
+
+    <div class="gubun-group-title">전입 · 전출 · 노선이동</div>
+    <div class="gubun-grid gubun-grid3">
+      <button type="button" class="gubun-btn" data-v="전입" onclick="구분선택('전입')">전입</button>
+      <button type="button" class="gubun-btn" data-v="전출" onclick="구분선택('전출')">전출</button>
+      <button type="button" class="gubun-btn" data-v="노선이동" onclick="구분선택('노선이동')">노선이동</button>
+    </div>
+
+    <!-- 성명 : 구분을 고른 바로 다음, "누구에 대한 기록인지"부터 적습니다 -->
+    <label>성명 <span class="hint">필수</span></label>
+    <input type="text" id="f_name" placeholder="예: 홍길동">
 
     <div class="row2">
       <div>
@@ -186,29 +231,6 @@
           <span class="sep">:</span>
           <input type="text" id="f_mi" maxlength="2" inputmode="numeric" placeholder="10" onfocus="this.select()">
         </div>
-      </div>
-    </div>
-
-    <!-- 성명 + 구분을 한 줄에 나란히 : 둘 다 "필수"이고 항상 같이 보이는 짝이라 가로로 붙여도 안전합니다 -->
-    <div class="row2">
-      <div>
-        <label>성명 <span class="hint">필수</span></label>
-        <input type="text" id="f_name" placeholder="예: 홍길동">
-      </div>
-      <div>
-        <label>구분 <span class="hint">필수</span></label>
-        <select id="f_gubun">
-          <option value="">-- 선택 --</option>
-          <option>사고</option>
-          <option>과태료</option>
-          <option>민원</option>
-          <option>음주(소내)</option>
-          <option>차량고장</option>
-          <option>기타</option>
-          <option>전입</option>
-          <option>전출</option>
-          <option>노선이동</option>
-        </select>
       </div>
     </div>
 
@@ -383,7 +405,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261120-07)
+   기사 사건·전입전출 입력 도구 (v20261124-01)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -513,7 +535,16 @@ function 시간값가져오기(){
 // ===================================================================
 // 3) 구분 선택에 따라 칸 보이기/숨기기
 // ===================================================================
-$('f_gubun').addEventListener('change', 구분바뀜);
+
+// 구분 버튼을 눌렀을 때 실행 : 값 저장 + 버튼 강조 + 칸 보이기/숨기기
+function 구분선택(값){
+  $('f_gubun').value = 값;
+  document.querySelectorAll('.gubun-btn').forEach(버튼 => {
+    버튼.classList.toggle('active', 버튼.dataset.v === 값);
+  });
+  구분바뀜();
+}
+
 function 구분바뀜(){
   const 구분 = $('f_gubun').value;
   const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
@@ -619,6 +650,7 @@ function 폼비우기(알려줄지){
   ['f_hh','f_mi','f_name','f_route','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_memo']
     .forEach(id => $(id).value = '');
   $('f_gubun').value = '';
+  document.querySelectorAll('.gubun-btn').forEach(버튼 => 버튼.classList.remove('active'));
   구분바뀜();
   $('warnbox').classList.add('hidden');
   $('f_name').focus();
@@ -907,7 +939,9 @@ async function 명단전체적용(){
 // ===================================================================
 // 9) Enter 키로 다음 칸 이동
 // ===================================================================
-const 입력순서 = ['f_yy','f_mm','f_dd','f_hh','f_mi','f_name','f_gubun','f_route','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_memo'];
+// 구분은 이제 버튼으로 고르므로(타이핑/탭 대상이 아님) 이 목록에서 뺐고,
+// 나머지는 화면에 보이는 순서(성명 → 날짜 → 시간 → 노선 → 민원접수처 → 차량번호 → 금액 → 장소 → 위반내용 → 개인차량번호 → 메모)대로 둠
+const 입력순서 = ['f_name','f_yy','f_mm','f_dd','f_hh','f_mi','f_route','f_office','f_car','f_amount','f_place','f_detail','f_personalcar','f_memo'];
 
 function 보이는가(id){
   let 노드 = $(id);
