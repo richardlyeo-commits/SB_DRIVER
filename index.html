@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-10
+  버전 : v20261124-11
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-10 = 2026년 11월 24일에 열 번째로 고친 버전)
+   예) v20261124-11 = 2026년 11월 24일에 열한 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -185,7 +185,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-10</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-11</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -238,7 +238,7 @@
 
     <!-- 성명 : 구분을 고른 바로 다음, "누구에 대한 기록인지"부터 적습니다 -->
     <label>성명 <span class="hint">필수</span></label>
-    <input type="text" id="f_name" lang="ko" placeholder="예: 홍길동">
+    <input type="text" id="f_name" lang="ko" placeholder="예: 홍길동" autocapitalize="off" autocorrect="off" spellcheck="false">
 
     <div class="row2">
       <div>
@@ -336,11 +336,11 @@
           <label>장소 <span class="hint">필수</span>
             <a href="#" id="map_link" onclick="지도보기(); return false;">🗺️ 지도</a>
           </label>
-          <input type="text" id="f_place" lang="ko" placeholder="예: 부곡주민센터 사거리">
+          <input type="text" id="f_place" lang="ko" placeholder="예: 부곡주민센터 사거리" autocapitalize="off" autocorrect="off" spellcheck="false">
         </div>
         <div id="wrap_detail">
           <label id="detail_label">위반 내용</label>
-          <input type="text" id="f_detail" lang="ko" placeholder="예: 신호위반">
+          <input type="text" id="f_detail" lang="ko" placeholder="예: 신호위반" autocapitalize="off" autocorrect="off" spellcheck="false">
         </div>
       </div>
     </div>
@@ -358,11 +358,11 @@
         </div>
       </div>
       <label>견습 내용 <span class="hint">전입일 때만</span></label>
-      <textarea id="f_training" lang="ko" rows="2" placeholder="예: 11/24~11/28 5번 노선 동승교육"></textarea>
+      <textarea id="f_training" lang="ko" rows="2" placeholder="예: 11/24~11/28 5번 노선 동승교육" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     </div>
 
     <label>메모</label>
-    <textarea id="f_memo" lang="ko" rows="2" placeholder="자유롭게 적기"></textarea>
+    <textarea id="f_memo" lang="ko" rows="2" placeholder="자유롭게 적기" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
 
     <div id="warnbox" class="warn hidden"></div>
 
@@ -384,7 +384,7 @@
     <div class="sub" style="margin:0 0 10px 0;">
       이름을 입력하면 그 기사의 현재 노선과, 지금까지 쌓인 사건·민원·인사이동 이력을 한 번에 모아 보여줍니다.
     </div>
-    <input type="text" id="f_search" lang="ko" placeholder="기사 이름을 입력하세요">
+    <input type="text" id="f_search" lang="ko" placeholder="기사 이름을 입력하세요" autocapitalize="off" autocorrect="off" spellcheck="false">
     <div id="search_result"></div>
   </div>
 
@@ -473,7 +473,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-10)
+   기사 사건·전입전출 입력 도구 (v20261124-11)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -506,7 +506,7 @@ let 수정중 = null;     // { 종류:'event'|'move', id:'...', created:숫자 }
 // ===================================================================
 // 1) 공용 저장소(db) 연결
 // ===================================================================
-/* [중요한 수정 - v20261124-10]
+/* [중요한 수정 - v20261124-11]
    예전 코드는 화면이 열리자마자 window.claude 가 있는지 딱 한 번만 확인했습니다.
    그런데 이 저장소 연결 통로(window.claude)는 화면이 그려진 "조금 뒤"에
    만들어집니다. 그래서 늘 "없다"고 판단해 버리고, 입력한 내용이 전부
@@ -1478,7 +1478,7 @@ function 낱자넣기(ㄴㅏㅌ){
 // 조립을 끝내고 더 이상 손대지 않음 (다른 칸으로 가거나 띄어쓰기 했을 때)
 function 조립끝(){ 조립중 = null; }
 
-/* 영문으로 친 글자들을 한글로 바꾸는 방법 (v20261124-10에서 방식 변경)
+/* 영문으로 친 글자들을 한글로 바꾸는 방법 (v20261124-11에서 방식 변경)
 
    예전 방식 : 키를 누르는 순간 가로채서(keydown) 한글로 바꿔 넣기
                -> 브라우저/키보드 종류에 따라 가로채기가 안 먹히는 경우가 있었음
@@ -1505,6 +1505,22 @@ function 로마자를한글로(글){
   결과 += 글자만들기();
   조립중 = null;
   return 결과;
+}
+
+/* 쌍자음(ㄲㄸㅃㅆㅉ) 문제 해결 - v20261124-11
+   두벌식에서 쌍자음은 'Shift를 누른 채' 쳐야 나옵니다 (Shift+ㄱ = ㄲ).
+   그런데 Shift를 누르지 않았는데도 대문자가 들어오는 경우가 있습니다 :
+     - Caps Lock(한글 상태에서는 쌍자음이 되면 안 됨)이 켜져 있을 때
+     - 휴대폰 키보드가 첫 글자를 자동으로 대문자로 만들 때
+   그래서 "Shift를 실제로 눌렀는지"를 따로 기억해 두었다가,
+   Shift 없이 들어온 대문자는 소문자로 되돌려서 처리합니다. */
+let 쉬프트눌림 = false;
+document.addEventListener('keydown', (e) => { 쉬프트눌림 = !!e.shiftKey; }, true);
+document.addEventListener('keyup',   (e) => { if (e.key === 'Shift') 쉬프트눌림 = false; }, true);
+
+// Shift를 누르지 않았다면 대문자를 소문자로 되돌림
+function 글쇠정리(글자들){
+  return 쉬프트눌림 ? 글자들 : 글자들.toLowerCase();
 }
 
 // 칸마다 따로 기억해 두는 상태
@@ -1534,7 +1550,7 @@ function 한글입력처리(e){
   if (값.length > 기대.length && 값.startsWith(기대) && /^[A-Za-z]+$/.test(값.slice(기대.length))){
     // 평소 경우 : 기억하던 내용 뒤에 영문이 더 붙었다
     접두사 = s.접두사;
-    로마   = s.로마 + 값.slice(기대.length);
+    로마   = s.로마 + 글쇠정리(값.slice(기대.length));
   } else {
     // 기억과 칸의 내용이 어긋난 경우
     // (폼을 비웠거나, 지웠거나, 다른 곳에서 값을 넣었거나 …)
@@ -1543,7 +1559,7 @@ function 한글입력처리(e){
     const 꼬리 = (값.match(/[A-Za-z]+$/) || [''])[0];
     if (!꼬리){ 상태초기화(칸); return; }   // 영문이 없으면 건드릴 것 없음
     접두사 = 값.slice(0, 값.length - 꼬리.length);
-    로마   = 꼬리;
+    로마   = 글쇠정리(꼬리);
   }
 
   s.접두사 = 접두사;
