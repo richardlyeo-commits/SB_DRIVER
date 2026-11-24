@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-06
+  버전 : v20261120-07
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-06 = 2026년 11월 24일에 여섯 번째로 고친 버전)
+   예) v20261120-07 = 2026년 11월 20일에 일곱 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -77,8 +77,6 @@
   input:disabled, select:disabled{ background:#f1f1f4; color:#999; }
 
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  /* 한 줄에 두 칸을 두었는데 한쪽이 숨겨졌을 때, 남은 한 칸을 한 줄 전체로 넓힘 */
-  .row2.solo{ grid-template-columns:1fr; }
   .hidden{ display:none !important; }
 
   .seg{ display:flex; align-items:center; gap:5px; }
@@ -128,25 +126,6 @@
   .route-body .person{ display:flex; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px dashed #eee; }
   .route-body .person:last-child{ border-bottom:none; }
   .route-body .person .idx{ color:var(--muted); width:22px; flex:none; }
-  /* ===== 한글 입력 켜기/끄기 단추 ===== */
-  .han-toggle{
-    background:#eceef5; color:#555; padding:10px 16px; border-radius:999px;
-    font-size:13px; font-weight:700; width:100%;
-  }
-  .han-toggle.on{ background:#16a34a; color:#fff; }
-
-  /* ===== 구분 선택 버튼 ===== */
-  .gubun-group-title{ font-size:11.5px; color:var(--muted); font-weight:600; margin:12px 0 6px 0; }
-  .gubun-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
-  .gubun-grid3{ grid-template-columns:repeat(3, 1fr); }
-  .gubun-btn{
-    background:#eceef5; color:#444; border:1.5px solid transparent;
-    padding:13px 6px; border-radius:11px; font-size:13.5px; font-weight:700;
-    cursor:pointer; transition:background .12s, color .12s, transform .05s;
-  }
-  .gubun-btn:active{ transform:scale(.97); }
-  .gubun-btn.active{ background:var(--primary); color:#fff; }
-
   .roster-edit textarea{ min-height:84px; font-size:13px; }
   /* 노선별 명단 가져오기 칸도 세로로 쭉 늘어놓지 않고 두 개씩 가로로 */
   #roster_textareas{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; }
@@ -173,7 +152,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-06</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261120-07</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -187,46 +166,6 @@
   <!-- ===== 입력 카드 ===== -->
   <div class="card">
     <h2><span class="icon">📝</span>입력폼</h2>
-
-    <!-- 한글 입력 켜기/끄기 단추.
-         켜 두면 키보드가 영어 상태여도 성명·장소·내용 칸에 한글이 들어갑니다. -->
-    <button type="button" class="han-toggle" id="han_toggle" onclick="한글모드토글()">🇰🇷 한글 입력 : 꺼짐</button>
-    <div class="sub" style="margin:6px 0 0 0;">
-      키보드 한/영 전환이 자꾸 영어로 돌아갈 때 이 단추를 켜세요.
-      키보드가 <b>이미 한글</b>이면 꺼 두셔야 합니다.
-    </div>
-
-    <!-- ===== 구분 선택 (맨 위) =====
-         예전에는 드롭다운(select) 목록 중 하나를 고르는 방식이었는데,
-         이제는 버튼을 바로 누르는 방식입니다. 버튼을 누르면:
-           1) 숨겨둔 f_gubun 칸(화면엔 안 보임)에 그 값을 저장하고
-           2) 누른 버튼만 진하게 표시하고
-           3) 기존에 쓰던 구분바뀜() 함수를 그대로 실행해서
-              그 아래 입력칸들을 보이거나 숨깁니다.
-         => 즉 "무엇을 골랐는지 저장하고 화면을 바꾸는" 역할은 그대로이고,
-            고르는 방법만 드롭다운 → 버튼으로 바뀐 것입니다. -->
-    <label>구분 <span class="hint">필수 · 먼저 선택하세요</span></label>
-    <input type="hidden" id="f_gubun" value="">
-
-    <div class="gubun-group-title">사건류</div>
-    <div class="gubun-grid">
-      <button type="button" class="gubun-btn" data-v="사고" onclick="구분선택('사고')">사고</button>
-      <button type="button" class="gubun-btn" data-v="과태료" onclick="구분선택('과태료')">과태료</button>
-      <button type="button" class="gubun-btn" data-v="민원" onclick="구분선택('민원')">민원</button>
-      <button type="button" class="gubun-btn" data-v="차량고장" onclick="구분선택('차량고장')">차량고장</button>
-      <button type="button" class="gubun-btn" data-v="기타" onclick="구분선택('기타')">기타</button>
-    </div>
-
-    <div class="gubun-group-title">전입 · 전출 · 노선이동</div>
-    <div class="gubun-grid gubun-grid3">
-      <button type="button" class="gubun-btn" data-v="전입" onclick="구분선택('전입')">전입</button>
-      <button type="button" class="gubun-btn" data-v="전출" onclick="구분선택('전출')">전출</button>
-      <button type="button" class="gubun-btn" data-v="노선이동" onclick="구분선택('노선이동')">노선이동</button>
-    </div>
-
-    <!-- 성명 : 구분을 고른 바로 다음, "누구에 대한 기록인지"부터 적습니다 -->
-    <label>성명 <span class="hint">필수</span></label>
-    <input type="text" id="f_name" lang="ko" placeholder="예: 홍길동">
 
     <div class="row2">
       <div>
@@ -250,32 +189,37 @@
       </div>
     </div>
 
+    <!-- 성명 + 구분을 한 줄에 나란히 : 둘 다 "필수"이고 항상 같이 보이는 짝이라 가로로 붙여도 안전합니다 -->
+    <div class="row2">
+      <div>
+        <label>성명 <span class="hint">필수</span></label>
+        <input type="text" id="f_name" placeholder="예: 홍길동">
+      </div>
+      <div>
+        <label>구분 <span class="hint">필수</span></label>
+        <select id="f_gubun">
+          <option value="">-- 선택 --</option>
+          <option>사고</option>
+          <option>과태료</option>
+          <option>민원</option>
+          <option>음주(소내)</option>
+          <option>차량고장</option>
+          <option>기타</option>
+          <option>전입</option>
+          <option>전출</option>
+          <option>노선이동</option>
+        </select>
+      </div>
+    </div>
+
     <!-- 노선 + 민원 접수처 : 한 줄에 나란히.
          (노선은 전출일 때만 숨김 / 민원 접수처는 '민원'일 때만 보임 —
           서로 숨는 조건은 다르지만, 둘 다 '선택' 칸이라 같이 묶어도
           화면이 지저분해지지 않습니다. 평소엔 노선만 보이고,
           민원을 고르면 그 옆에 민원 접수처가 같이 나타납니다.) -->
     <div class="row2">
-      <!-- 원래 노선 : '노선이동'일 때만 나타남.
-           명단(로스터)에 그 기사가 있으면 현재 노선이 자동으로 채워지고,
-           명단에 없으면 직접 고르시면 됩니다. -->
-      <div id="wrap_route_from">
-        <label>원래 노선 <span class="hint" id="route_from_hint">필수</span></label>
-        <select id="f_route_from">
-          <option value="">-- 선택 --</option>
-          <option>1-1</option>
-          <option>1-5</option>
-          <option>5</option>
-          <option>5-2</option>
-          <option>60-1</option>
-          <option>87</option>
-          <option>똑버스01</option>
-          <option>P9901</option>
-        </select>
-      </div>
-
       <div id="wrap_route">
-        <label><span id="route_label">노선</span> <span class="hint" id="route_hint">사건류는 참고용</span></label>
+        <label>노선 <span class="hint" id="route_hint">사건류는 참고용</span></label>
         <select id="f_route">
           <option value="">-- 선택 --</option>
           <option>1-1</option>
@@ -301,56 +245,43 @@
       </div>
     </div>
 
-    <!-- 사건류 전용 칸.
-         이제는 "사건류냐 아니냐"로 통째로 숨기는 게 아니라, 아래 자바스크립트의
-         '구분설정' 표에 따라 칸 하나하나(차량번호/금액/장소/내용)를
-         구분별로 따로따로 보이거나 숨깁니다. -->
+    <!-- 사건류 전용 칸 (전입/전출/노선이동일 때는 자동으로 숨김) -->
     <div id="wrap_event">
-      <!-- 차량번호 + 금액 -->
+      <!-- 차량번호 + 금액 : 둘 다 짧은 숫자 입력칸이라 한 줄에 나란히 -->
       <div class="row2">
-        <div id="wrap_car">
+        <div>
           <label>차량번호 <span class="hint">뒤 4자리</span></label>
           <input type="text" id="f_car" maxlength="4" inputmode="numeric" placeholder="예: 1194">
         </div>
-        <div id="wrap_amount">
-          <label id="amount_label">금액(원) <span class="hint">숫자만</span></label>
+        <div>
+          <label>금액(원) <span class="hint">숫자만</span></label>
           <input type="text" id="f_amount" inputmode="numeric" placeholder="예: 70000">
         </div>
       </div>
 
-      <!-- 장소 + 내용 (내용 칸의 이름은 구분에 따라 '사고 내용/위반 내용/민원 내용…'으로 바뀜) -->
+      <!-- 장소 + 위반 내용 : 사건류일 땐 둘 다 항상 같이 보이는 짝이라 한 줄로 -->
       <div class="row2">
-        <div id="wrap_place">
-          <label>장소 <span class="hint">필수</span>
+        <div>
+          <label>장소 <span class="hint">사건류만 필수</span>
             <a href="#" id="map_link" onclick="지도보기(); return false;">🗺️ 지도</a>
           </label>
-          <input type="text" id="f_place" lang="ko" placeholder="예: 부곡주민센터 사거리">
+          <input type="text" id="f_place" placeholder="예: 부곡주민센터 사거리">
         </div>
-        <div id="wrap_detail">
-          <label id="detail_label">위반 내용</label>
-          <input type="text" id="f_detail" lang="ko" placeholder="예: 신호위반">
+        <div>
+          <label>위반 내용</label>
+          <input type="text" id="f_detail" placeholder="예: 신호위반">
         </div>
       </div>
     </div>
 
-    <!-- 전입 전용 칸 : 개인차량번호 + 개인 전화번호를 한 줄에, 그 아래 견습 내용 -->
+    <!-- 전입 전용 칸 -->
     <div id="wrap_personal_car" class="hidden">
-      <div class="row2">
-        <div>
-          <label>개인차량번호 <span class="hint">전입일 때만</span></label>
-          <input type="text" id="f_personalcar">
-        </div>
-        <div>
-          <label>개인 전화번호 <span class="hint">전입일 때만</span></label>
-          <input type="text" id="f_personalphone" inputmode="tel" placeholder="예: 010-1234-5678">
-        </div>
-      </div>
-      <label>견습 내용 <span class="hint">전입일 때만</span></label>
-      <textarea id="f_training" lang="ko" rows="2" placeholder="예: 11/24~11/28 5번 노선 동승교육"></textarea>
+      <label>개인차량번호 <span class="hint">전입일 때만</span></label>
+      <input type="text" id="f_personalcar">
     </div>
 
     <label>메모</label>
-    <textarea id="f_memo" lang="ko" rows="2" placeholder="자유롭게 적기"></textarea>
+    <textarea id="f_memo" rows="2" placeholder="자유롭게 적기"></textarea>
 
     <div id="warnbox" class="warn hidden"></div>
 
@@ -366,7 +297,7 @@
     <div class="sub" style="margin:0 0 10px 0;">
       이름을 입력하면 그 기사의 현재 노선과, 지금까지 쌓인 사건·민원·인사이동 이력을 한 번에 모아 보여줍니다.
     </div>
-    <input type="text" id="f_search" lang="ko" placeholder="기사 이름을 입력하세요">
+    <input type="text" id="f_search" placeholder="기사 이름을 입력하세요">
     <div id="search_result"></div>
   </div>
 
@@ -452,7 +383,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-06)
+   기사 사건·전입전출 입력 도구 (v20261120-07)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -482,32 +413,11 @@ let db사용가능 = false;
 // ===================================================================
 // 1) 공용 저장소(db) 연결
 // ===================================================================
-/* [중요한 수정 - v20261124-06]
-   예전 코드는 화면이 열리자마자 window.claude 가 있는지 딱 한 번만 확인했습니다.
-   그런데 이 저장소 연결 통로(window.claude)는 화면이 그려진 "조금 뒤"에
-   만들어집니다. 그래서 늘 "없다"고 판단해 버리고, 입력한 내용이 전부
-   이 화면 안에만(새로고침하면 사라지는 상태로) 쌓이고 있었습니다.
-   => 이제는 통로가 생길 때까지 최대 12초 동안 0.2초 간격으로 기다립니다. */
-function 저장소통로기다리기(최대초){
-  return new Promise(resolve => {
-    const 마감 = Date.now() + 최대초 * 1000;
-    (function 확인(){
-      if (window.claude && typeof window.claude.use === 'function') return resolve(true);
-      if (Date.now() > 마감) return resolve(false);
-      setTimeout(확인, 200);
-    })();
-  });
-}
-
 (async function db연결(){
-  동기화상태표시(false, '저장 위치 확인 중…');
-
-  const 통로있음 = await 저장소통로기다리기(12);
-  if (!통로있음){
-    동기화상태표시(false, '저장소에 연결하지 못했습니다. 이 화면에만 임시 저장됩니다.');
+  if (!window.claude || typeof window.claude.use !== 'function'){
+    동기화상태표시(false, '이 화면 혼자서만 임시 저장됩니다.');
     return;
   }
-
   try{ db = await window.claude.use('db'); }catch(e){ db = null; }
 
   if (!db){
@@ -603,156 +513,21 @@ function 시간값가져오기(){
 // ===================================================================
 // 3) 구분 선택에 따라 칸 보이기/숨기기
 // ===================================================================
-
-// 구분 버튼을 눌렀을 때 실행 : 값 저장 + 버튼 강조 + 칸 보이기/숨기기
-function 구분선택(값){
-  $('f_gubun').value = 값;
-  document.querySelectorAll('.gubun-btn').forEach(버튼 => {
-    버튼.classList.toggle('active', 버튼.dataset.v === 값);
-  });
-  구분바뀜();
-}
-
-/* ===== 구분별 입력폼 설정표 =====
-   버튼(구분)마다 "어떤 칸을 보여줄지"와 "칸 이름을 뭐라고 부를지"를
-   여기 한 곳에 모아 적어 둡니다. 나중에 칸을 더하거나 빼고 싶으면
-   아래 표의 true/false 만 고치면 되고, 다른 코드는 건드릴 필요가 없습니다.
-     시간/노선/차량/금액/접수처/장소/내용  : 그 칸을 보여줄지 (true=보임)
-     노선필수                              : 노선을 꼭 골라야 하는지
-     내용라벨 / 내용예시                   : '내용' 칸의 이름과 예시 글씨
-     전입칸                                : 개인차량·전화·견습 칸을 보여줄지 */
-const 구분설정 = {
-  '사고':     { 시간:true,  노선:true,  차량:true,  금액:false, 접수처:false, 장소:true,  내용:true,
-                노선필수:false, 내용라벨:'사고 내용', 내용예시:'예: 후진 중 접촉', 전입칸:false },
-  '과태료':   { 시간:true,  노선:true,  차량:true,  금액:true,  접수처:false, 장소:true,  내용:true,
-                노선필수:false, 내용라벨:'위반 내용', 내용예시:'예: 신호위반',    전입칸:false },
-  '민원':     { 시간:true,  노선:true,  차량:true,  금액:false, 접수처:true,  장소:true,  내용:true,
-                노선필수:false, 내용라벨:'민원 내용', 내용예시:'예: 불친절',      전입칸:false },
-  '차량고장': { 시간:true,  노선:true,  차량:true,  금액:false, 접수처:false, 장소:true,  내용:true,
-                노선필수:false, 내용라벨:'고장 내용', 내용예시:'예: 에어 누설',   전입칸:false },
-  '기타':     { 시간:true,  노선:true,  차량:true,  금액:true,  접수처:false, 장소:true,  내용:true,
-                노선필수:false, 내용라벨:'내용',      내용예시:'자유롭게 적기',   전입칸:false },
-  '전입':     { 시간:false, 노선:true,  차량:false, 금액:false, 접수처:false, 장소:false, 내용:false,
-                노선필수:true,  노선라벨:'배치 노선', 전입칸:true },
-  '전출':     { 시간:false, 노선:false, 차량:false, 금액:false, 접수처:false, 장소:false, 내용:false,
-                노선필수:false, 전입칸:false },
-  // 노선이동만 '원래 노선' 칸이 하나 더 나타납니다 (원래 노선 → 이동 노선)
-  '노선이동': { 시간:false, 노선:true,  차량:false, 금액:false, 접수처:false, 장소:false, 내용:false,
-                노선필수:true,  원래노선:true, 노선라벨:'이동 노선', 전입칸:false },
-};
-
-// 아직 아무 구분도 안 고른 상태(처음 화면)에서는 모든 칸을 숨겨 둡니다
-const 빈설정 = { 시간:false, 노선:false, 차량:false, 금액:false, 접수처:false,
-                 장소:false, 내용:false, 노선필수:false, 원래노선:false, 전입칸:false };
-
-// 지금 고른 구분에 맞는 설정을 돌려줌
-function 지금설정(){
-  return 구분설정[$('f_gubun').value] || 빈설정;
-}
-
+$('f_gubun').addEventListener('change', 구분바뀜);
 function 구분바뀜(){
-  const s = 지금설정();
+  const 구분 = $('f_gubun').value;
+  const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
 
-  // 1) 설정표대로 칸을 하나씩 보이거나 숨김 (hidden 이라는 이름표를 붙였다 뗐다 함)
-  $('wrap_time').classList.toggle('hidden',        !s.시간);
-  $('wrap_route_from').classList.toggle('hidden',  !s.원래노선);
-  $('wrap_route').classList.toggle('hidden',       !s.노선);
-  $('wrap_minwon').classList.toggle('hidden',      !s.접수처);
-  $('wrap_car').classList.toggle('hidden',         !s.차량);
-  $('wrap_amount').classList.toggle('hidden',      !s.금액);
-  $('wrap_place').classList.toggle('hidden',       !s.장소);
-  $('wrap_detail').classList.toggle('hidden',      !s.내용);
-  $('wrap_personal_car').classList.toggle('hidden',!s.전입칸);
-  // 차량·금액·장소·내용이 전부 숨겨지면 그 묶음 자체도 숨김
-  $('wrap_event').classList.toggle('hidden', !(s.차량 || s.금액 || s.장소 || s.내용));
+  // 사건 전용 칸(차량번호·민원접수처·장소·위반내용·금액, 시간)은 인사이동류면 숨김
+  $('wrap_event').classList.toggle('hidden', 인사이동);
+  $('wrap_time').classList.toggle('hidden', 인사이동);
 
-  // 2) 칸 이름(라벨)과 예시 글씨를 구분에 맞게 바꿈
-  $('route_hint').textContent = s.노선필수 ? '필수' : '참고용';
-  $('route_label').textContent = s.노선라벨 || '노선';
-  if (s.내용){
-    $('detail_label').textContent = s.내용라벨;
-    $('f_detail').placeholder = s.내용예시;
-  }
-  // 노선이동이면, 명단에 있는 그 기사의 현재 노선을 '원래 노선'에 자동으로 채워 줌
-  if (s.원래노선) 원래노선자동채움();
+  // 노선 칸: 전출만 숨김 (전출은 명단에서 빼기만 하면 되므로 노선이 필요 없음)
+  $('wrap_route').classList.toggle('hidden', 구분 === '전출');
+  $('route_hint').textContent = (구분 === '전입' || 구분 === '노선이동') ? '필수' : '사건류는 참고용';
 
-  // 3) 숨겨진 칸에 예전 값이 남아 있으면 지움 (엉뚱한 값이 같이 저장되는 것 방지)
-  if (!s.시간){ $('f_hh').value = ''; $('f_mi').value = ''; }
-  if (!s.원래노선) $('f_route_from').value = '';
-  if (!s.노선)   $('f_route').value = '';
-  if (!s.접수처) $('f_office').value = '';
-  if (!s.차량)   $('f_car').value = '';
-  if (!s.금액)   $('f_amount').value = '';
-  if (!s.장소)   $('f_place').value = '';
-  if (!s.내용)   $('f_detail').value = '';
-  if (!s.전입칸){ $('f_personalcar').value = ''; $('f_personalphone').value = ''; $('f_training').value = ''; }
-
-  // 4) 한 줄에 둘씩 놓은 묶음 중, 한쪽만 보이면 그 칸을 한 줄 전체로 넓혀 줌
-  줄정리();
-}
-
-/* ===== 전화번호 자동 서식 =====
-   01012345678 처럼 줄표(-) 없이 적어도 010-1234-5678 모양으로 바꿔 줍니다.
-   동작 방식 :
-     1) 숫자만 남깁니다 (줄표·공백·괄호는 모두 떼어냄)
-     2) 자릿수와 앞자리를 보고 줄표를 알맞게 끼워 넣습니다
-   아는 모양이 아니면(자릿수가 애매하면) 적으신 그대로 둡니다. */
-function 전화번호다듬기(값){
-  if (!값) return '';
-  const 숫자 = String(값).replace(/[^0-9]/g, '');   // 숫자만 남기기
-  if (!숫자) return 값.trim();
-
-  // 1588-1234 같은 8자리 대표번호
-  if (숫자.length === 8) return 숫자.slice(0,4) + '-' + 숫자.slice(4);
-
-  // 서울(02)은 지역번호가 두 자리
-  if (숫자.startsWith('02')){
-    if (숫자.length === 9)  return '02-' + 숫자.slice(2,5) + '-' + 숫자.slice(5);
-    if (숫자.length === 10) return '02-' + 숫자.slice(2,6) + '-' + 숫자.slice(6);
-    return 값.trim();
-  }
-
-  // 010, 031, 070 등 앞자리가 세 자리인 경우
-  if (숫자.length === 10) return 숫자.slice(0,3) + '-' + 숫자.slice(3,6) + '-' + 숫자.slice(6);
-  if (숫자.length === 11) return 숫자.slice(0,3) + '-' + 숫자.slice(3,7) + '-' + 숫자.slice(7);
-
-  return 값.trim();   // 모르는 모양이면 건드리지 않음
-}
-
-// 전화번호 칸에서 다른 칸으로 넘어가는 순간 모양을 다듬어 줌
-(function 전화번호칸준비(){
-  const 칸 = $('f_personalphone');
-  if (!칸) return;
-  칸.addEventListener('blur', () => { 칸.value = 전화번호다듬기(칸.value); });
-})();
-
-/* 원래 노선 자동 채우기
-   '노선이동'일 때, 성명 칸에 적힌 이름을 명단(로스터)에서 찾아
-   그 기사의 현재 노선을 '원래 노선' 칸에 자동으로 넣어 줍니다.
-   - 명단에 그 이름이 없으면 아무것도 하지 않습니다(직접 고르시면 됩니다).
-   - 이미 직접 고른 값이 있으면 덮어쓰지 않습니다. */
-function 원래노선자동채움(){
-  if (!지금설정().원래노선) return;              // 노선이동일 때만 동작
-  if ($('f_route_from').value !== '') return;    // 이미 값이 있으면 그대로 둠
-  const 이름 = $('f_name').value.trim();
-  if (!이름) return;
-  const 찾은사람 = 로스터목록.find(x => x.성명 === 이름);
-  if (찾은사람) {
-    $('f_route_from').value = 찾은사람.노선;
-    $('route_from_hint').textContent = '명단에서 자동으로 채움';
-  } else {
-    $('route_from_hint').textContent = '필수';
-  }
-}
-// 이름을 적을 때마다 자동 채우기를 한 번씩 시도
-$('f_name').addEventListener('input', 원래노선자동채움);
-
-// 가로로 둘씩 묶어 둔 줄(.row2) 중에서 한 칸만 보이는 줄은 한 칸짜리 줄로 바꿈
-function 줄정리(){
-  document.querySelectorAll('.row2').forEach(줄 => {
-    const 보이는칸 = Array.from(줄.children).filter(칸 => !칸.classList.contains('hidden'));
-    줄.classList.toggle('solo', 보이는칸.length === 1);
-  });
+  $('wrap_personal_car').classList.toggle('hidden', 구분 !== '전입');
+  $('wrap_minwon').classList.toggle('hidden', 구분 !== '민원');
 }
 
 function 비었나(값){ return !값 || String(값).trim() === ''; }
@@ -764,20 +539,15 @@ function 저장하기(){
   const 성명 = $('f_name').value.trim();
   const 구분 = $('f_gubun').value;
   const 노선 = $('f_route').value;
-  const 원래노선 = $('f_route_from').value;
   const 차량 = $('f_car').value.trim();
   const 접수처 = $('f_office').value;
   const 장소 = $('f_place').value.trim();
   const 위반 = $('f_detail').value.trim();
   const 금액 = $('f_amount').value.trim();
   const 개인차량 = $('f_personalcar').value.trim();
-  // 저장할 때도 한 번 더 다듬어서, 어떤 식으로 적으셨든 같은 모양으로 저장되게 함
-  const 개인전화 = 전화번호다듬기($('f_personalphone').value);
-  const 견습내용 = $('f_training').value.trim();
   const 메모 = $('f_memo').value.trim();
 
   const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
-  const s = 지금설정();   // 지금 고른 구분의 설정(어떤 칸이 보이는지)
   let 빠짐 = [];
 
   const 날짜결과 = 날짜값가져오기();
@@ -789,16 +559,13 @@ function 저장하기(){
   if (비었나(성명)) 빠짐.push('성명');
   if (비었나(구분)) 빠짐.push('구분');
 
-  // 화면에 보이는 칸만 "필수"로 검사합니다 (숨겨진 칸은 검사하지 않음)
-  if (s.시간){
+  if (!인사이동){
     if (시간결과.empty) 빠짐.push('시간');
     else if (!시간결과.ok) 빠짐.push('시간(시·분 두 자리씩)');
+    if (비었나(장소)) 빠짐.push('장소');
+    if (구분 === '민원' && 비었나(접수처)) 빠짐.push('민원 접수처');
   }
-  if (s.장소 && 비었나(장소)) 빠짐.push('장소');
-  if (s.접수처 && 비었나(접수처)) 빠짐.push('민원 접수처');
-  if (s.노선필수 && 비었나(노선)) 빠짐.push(s.노선라벨 || '노선');
-  if (s.원래노선 && 비었나(원래노선)) 빠짐.push('원래 노선');
-  if (s.원래노선 && !비었나(원래노선) && 원래노선 === 노선) 빠짐.push('원래 노선과 이동 노선이 같음');
+  if ((구분 === '전입' || 구분 === '노선이동') && 비었나(노선)) 빠짐.push('노선');
   if (!비었나(차량) && !/^\d{4}$/.test(차량)) 빠짐.push('차량번호(숫자 4자리)');
   if (!비었나(금액) && !/^\d+$/.test(금액)) 빠짐.push('금액(숫자만)');
 
@@ -812,27 +579,18 @@ function 저장하기(){
   const 날짜 = 날짜결과.iso;
   const 시간 = 시간결과.ok ? 시간결과.hhmm : '';
 
-  if (인사이동){
-    // 전입·전출·노선이동을 모두 '전입전출' 목록에 남깁니다.
-    // 노선이동이면 '노선변경' 칸에 "원래 노선 → 이동 노선" 형태로 적어 둡니다.
-    const 기록 = {
-      날짜, 성명, 구분,
-      노선변경: (구분==='노선이동') ? `${원래노선} → ${노선}`
-              : (구분==='전입')     ? `→ ${노선}`
-              : '',
-      개인차량: (구분==='전입' ? 개인차량 : ''),
-      개인전화: (구분==='전입' ? 개인전화 : ''),
-      견습내용: (구분==='전입' ? 견습내용 : ''),
-      메모, created: Date.now()
-    };
+  if (구분 === '전입' || 구분 === '전출'){
+    // 전입·전출은 기존 엑셀 '전입전출' 시트 칸과 똑같이 기록해 둠
+    const 기록 = { 날짜, 성명, 구분, 개인차량: (구분==='전입' ? 개인차량 : ''), 메모, created: Date.now() };
     목록추가('move', 기록);
-  } else {
+  } else if (!인사이동){
     const 기록 = {
       발생일시: `${날짜} ${시간}`, 성명, 노선, 차량, 구분,
       접수처: (구분==='민원' ? 접수처 : ''), 장소, 위반, 금액, 메모, created: Date.now()
     };
     목록추가('event', 기록);
   }
+  // '노선이동'은 엑셀 '전입전출' 시트에 해당 칸이 없어서 목록에는 남기지 않고, 명단만 바꿉니다.
 
   // ----- 명단(로스터) 자동 갱신 -----
   if (구분 === '전입' || 구분 === '노선이동'){
@@ -848,15 +606,7 @@ function 저장하기(){
 function 목록추가(종류, 기록){
   const 컬렉션 = (종류 === 'event') ? 'event_records' : 'move_records';
   if (db사용가능){
-    try{
-      // .set()은 "저장해 달라"고 부탁한 뒤 결과가 나중에 오는 방식이라,
-      // .catch()로 뒤늦게 오는 실패도 반드시 붙잡아 알려 줍니다.
-      db.collection(컬렉션).doc().set(기록).catch(() => {
-        동기화상태표시(false, '저장 실패 - 이 화면에만 남아 있습니다.');
-        알림('⚠ 저장소에 저장하지 못했습니다. 엑셀로 복사해 두세요.');
-      });
-      return;
-    }
+    try{ db.collection(컬렉션).doc().set(기록); return; }
     catch(e){ 동기화상태표시(false, '저장 중 오류가 있어 이 화면에만 임시 저장됩니다.'); }
   }
   const 임시id = 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
@@ -866,10 +616,9 @@ function 목록추가(종류, 기록){
 }
 
 function 폼비우기(알려줄지){
-  ['f_hh','f_mi','f_name','f_route','f_route_from','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_personalphone','f_training','f_memo']
+  ['f_hh','f_mi','f_name','f_route','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_memo']
     .forEach(id => $(id).value = '');
   $('f_gubun').value = '';
-  document.querySelectorAll('.gubun-btn').forEach(버튼 => 버튼.classList.remove('active'));
   구분바뀜();
   $('warnbox').classList.add('hidden');
   $('f_name').focus();
@@ -880,7 +629,7 @@ function 폼비우기(알려줄지){
 // 5) 사건기록 / 전입전출 목록 표시
 // ===================================================================
 const 이벤트필드 = ['발생일시','성명','노선','차량','구분','접수처','장소','위반','금액','메모'];
-const 이동필드   = ['날짜','성명','구분','노선변경','개인차량','개인전화','견습내용','메모'];
+const 이동필드   = ['날짜','성명','구분','개인차량','메모'];
 
 function 그리기(){
   그리기_표('event', 사건목록, 이벤트필드);
@@ -910,8 +659,8 @@ function 기사별그리기(){
   html += `</div>`;
 
   if (이동들.length > 0){
-    html += '<div class="hint" style="margin-bottom:4px;">인사 이력</div><table><tr><th>날짜</th><th>구분</th><th>노선변경</th><th>견습 내용</th><th>메모</th></tr>';
-    이동들.forEach(x => html += `<tr><td>${x.날짜||''}</td><td>${x.구분||''}</td><td>${x.노선변경||''}</td><td>${x.견습내용||''}</td><td>${x.메모||''}</td></tr>`);
+    html += '<div class="hint" style="margin-bottom:4px;">인사 이력</div><table><tr><th>날짜</th><th>구분</th><th>메모</th></tr>';
+    이동들.forEach(x => html += `<tr><td>${x.날짜||''}</td><td>${x.구분||''}</td><td>${x.메모||''}</td></tr>`);
     html += '</table>';
   }
   if (사건들.length > 0){
@@ -1143,193 +892,22 @@ async function 명단전체적용(){
   if (!할까) return;
 
   if (db사용가능){
-    try{
-      // 기존 명단을 전부 지우고
-      await Promise.all(로스터목록.map(x => db.doc('roster/' + x.id).delete()));
-      // 새 명단을 하나씩 추가 (전부 저장될 때까지 기다림)
-      await Promise.all(새명단.map(x => db.collection('roster').doc().set(x)));
-    }catch(e){
-      // 저장이 실패했는데 "저장됐다"고 알려주면 안 되므로, 실패를 그대로 알립니다
-      알림('명단 저장에 실패했습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.');
-      return;
-    }
-    명단편집토글();
-    알림('명단 ' + 새명단.length + '명이 저장되었습니다.');
+    // 기존 명단을 전부 지우고
+    로스터목록.forEach(x => { try{ db.doc('roster/' + x.id).delete(); }catch(e){} });
+    // 새 명단을 하나씩 추가
+    새명단.forEach(x => { try{ db.collection('roster').doc().set(x); }catch(e){} });
   } else {
-    // 저장소에 연결이 안 된 상태 : 이 화면에만 임시로 들어갑니다 (새로고침하면 사라짐)
     로스터목록 = 새명단.map(x => ({ id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), ...x }));
     로스터그리기();
-    명단편집토글();
-    알림('⚠ 저장소에 연결되지 않아 이 화면에만 들어갔습니다. 새로고침하면 사라집니다.');
   }
+  명단편집토글();
+  알림('명단이 적용되었습니다.');
 }
-
-// ===================================================================
-// 8-2) 한글 강제 입력 (화면 안에 직접 만든 한글 입력기)
-// ===================================================================
-/* 왜 필요한가 :
-   웹페이지는 윈도우나 휴대폰의 한/영 상태를 바꿀 권한이 없습니다.
-   그래서 숫자칸을 거쳐 글자칸으로 오면 영어로 돌아가 버립니다.
-   => 아예 이 화면이 직접 한글을 조립하기로 했습니다.
-      [한글 입력 : 켜짐]으로 켜 두면, 키보드가 영어 상태여도
-      dkssud 을 치면 '안녕'으로 바뀌어 들어갑니다.
-   주의 : 키보드가 이미 한글 상태라면 이 기능은 꺼 두셔야 합니다
-         (둘 다 켜면 글자가 겹쳐서 이상해집니다). */
-
-// 영문 자판 글쇠 -> 한글 낱자 (두벌식)
-const 자판 = {
-  q:'ㅂ', w:'ㅈ', e:'ㄷ', r:'ㄱ', t:'ㅅ', y:'ㅛ', u:'ㅕ', i:'ㅑ', o:'ㅐ', p:'ㅔ',
-  a:'ㅁ', s:'ㄴ', d:'ㅇ', f:'ㄹ', g:'ㅎ', h:'ㅗ', j:'ㅓ', k:'ㅏ', l:'ㅣ',
-  z:'ㅋ', x:'ㅌ', c:'ㅊ', v:'ㅍ', b:'ㅠ', n:'ㅜ', m:'ㅡ',
-  Q:'ㅃ', W:'ㅉ', E:'ㄸ', R:'ㄲ', T:'ㅆ', O:'ㅒ', P:'ㅖ',
-  A:'ㅁ', S:'ㄴ', D:'ㅇ', F:'ㄹ', G:'ㅎ', H:'ㅗ', J:'ㅓ', K:'ㅏ', L:'ㅣ',
-  Z:'ㅋ', X:'ㅌ', C:'ㅊ', V:'ㅍ', B:'ㅠ', N:'ㅜ', M:'ㅡ',
-  Y:'ㅛ', U:'ㅕ', I:'ㅑ'
-};
-
-const 초성표 = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
-const 중성표 = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
-const 종성표 = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
-
-// 모음 두 개가 합쳐지는 경우 (ㅗ+ㅏ=ㅘ 처럼)
-const 겹모음 = { 'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ' };
-// 받침 두 개가 합쳐지는 경우 (ㄱ+ㅅ=ㄳ 처럼)
-const 겹받침 = { 'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ','ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ' };
-// 겹받침을 다시 둘로 나눌 때 쓰는 표 (뒤 글자가 다음 글자의 첫소리로 넘어감)
-const 받침나누기 = {};
-Object.keys(겹받침).forEach(두개 => { 받침나누기[겹받침[두개]] = [두개[0], 두개[1]]; });
-
-let 한글모드 = false;          // 켜짐/꺼짐
-let 조립중 = null;             // 지금 만들고 있는 글자 { 초, 중, 종 }
-
-function 모음인가(ㄱㅏ){ return 중성표.indexOf(ㄱㅏ) >= 0; }
-
-// 지금 조립 중인 글자를 실제 글자 하나로 만들어 돌려줌
-function 글자만들기(){
-  if (!조립중) return '';
-  const { 초, 중, 종 } = 조립중;
-  if (초 && 중){
-    const i초 = 초성표.indexOf(초), i중 = 중성표.indexOf(중), i종 = 종성표.indexOf(종 || '');
-    if (i초 >= 0 && i중 >= 0 && i종 >= 0) return String.fromCharCode(0xAC00 + (i초 * 21 + i중) * 28 + i종);
-  }
-  return (초 || '') + (중 || '') + (종 || '');
-}
-
-// 낱자 하나를 받아서 조립 상태를 바꾸고, "앞에 확정된 글자"를 돌려줌
-function 낱자넣기(ㄴㅏㅌ){
-  let 확정 = '';
-  if (!조립중) 조립중 = { 초:'', 중:'', 종:'' };
-  const c = 조립중;
-
-  if (모음인가(ㄴㅏㅌ)){
-    if (c.초 && !c.중){ c.중 = ㄴㅏㅌ; }
-    else if (c.초 && c.중 && !c.종){
-      const 합 = 겹모음[c.중 + ㄴㅏㅌ];
-      if (합) c.중 = 합;
-      else { 확정 = 글자만들기(); 조립중 = { 초:'', 중:ㄴㅏㅌ, 종:'' }; }
-    }
-    else if (c.초 && c.중 && c.종){
-      // 받침이 다음 글자의 첫소리로 넘어감 (예: 안 + ㅣ -> 아니)
-      let 넘길자음 = c.종, 남을받침 = '';
-      if (받침나누기[c.종]){ 남을받침 = 받침나누기[c.종][0]; 넘길자음 = 받침나누기[c.종][1]; }
-      c.종 = 남을받침;
-      확정 = 글자만들기();
-      조립중 = { 초:넘길자음, 중:ㄴㅏㅌ, 종:'' };
-    }
-    else { 확정 = 글자만들기(); 조립중 = { 초:'', 중:ㄴㅏㅌ, 종:'' }; }
-  } else {
-    // 자음일 때
-    if (!c.초 && !c.중){ c.초 = ㄴㅏㅌ; }
-    else if (c.초 && !c.중){ 확정 = 글자만들기(); 조립중 = { 초:ㄴㅏㅌ, 중:'', 종:'' }; }
-    else if (c.초 && c.중 && !c.종){
-      if (종성표.indexOf(ㄴㅏㅌ) > 0) c.종 = ㄴㅏㅌ;
-      else { 확정 = 글자만들기(); 조립중 = { 초:ㄴㅏㅌ, 중:'', 종:'' }; }
-    }
-    else {
-      const 합 = 겹받침[c.종 + ㄴㅏㅌ];
-      if (합) c.종 = 합;
-      else { 확정 = 글자만들기(); 조립중 = { 초:ㄴㅏㅌ, 중:'', 종:'' }; }
-    }
-  }
-  return 확정;
-}
-
-// 조립을 끝내고 더 이상 손대지 않음 (다른 칸으로 가거나 띄어쓰기 했을 때)
-function 조립끝(){ 조립중 = null; }
-
-// 키를 눌렀을 때 가로채서 한글로 바꿔 넣는 처리
-function 한글키처리(e){
-  if (!한글모드) return;
-  if (e.ctrlKey || e.altKey || e.metaKey) return;
-  const 칸 = e.target;
-
-  // 글자를 맨 끝에 치고 있을 때만 동작 (중간을 고칠 땐 평소대로)
-  if (칸.selectionStart !== 칸.value.length || 칸.selectionEnd !== 칸.value.length){ 조립끝(); return; }
-
-  if (e.key === 'Backspace'){
-    if (!조립중) return;                       // 조립 중이 아니면 평소대로 지움
-    e.preventDefault();
-    const c = 조립중;
-    if (c.종){ c.종 = 받침나누기[c.종] ? 받침나누기[c.종][0] : ''; }
-    else if (c.중){
-      const 쪼갤것 = Object.keys(겹모음).find(k => 겹모음[k] === c.중);
-      c.중 = 쪼갤것 ? 쪼갤것[0] : '';
-    }
-    else if (c.초){ c.초 = ''; }
-    const 남은글자 = 글자만들기();
-    if (!c.초 && !c.중 && !c.종) 조립중 = null;
-    칸.value = 칸.value.slice(0, -1) + 남은글자;
-    return;
-  }
-
-  if (e.key.length !== 1){ 조립끝(); return; }   // Enter, Tab, 화살표 등은 그대로
-
-  const 낱자 = 자판[e.key];
-  if (!낱자){ 조립끝(); return; }                // 숫자, 기호, 띄어쓰기는 그대로
-
-  e.preventDefault();
-  const 조립전글자 = 조립중 ? 글자만들기() : '';
-  const 확정 = 낱자넣기(낱자);
-  const 뒤 = 글자만들기();
-  // 화면에 있던 "조립 중이던 글자"를 지우고, 확정된 글자 + 새로 조립 중인 글자를 붙임
-  칸.value = 칸.value.slice(0, 칸.value.length - 조립전글자.length) + 확정 + 뒤;
-  칸.dispatchEvent(new Event('input', { bubbles:true }));  // 자동 채움 같은 기능이 반응하도록
-}
-
-// 한글 입력을 켜고 끄는 단추
-function 한글모드토글(){
-  한글모드 = !한글모드;
-  조립끝();
-  const 단추 = $('han_toggle');
-  단추.textContent = 한글모드 ? '🇰🇷 한글 입력 : 켜짐' : '🇰🇷 한글 입력 : 꺼짐';
-  단추.classList.toggle('on', 한글모드);
-  try{ localStorage.setItem('한글모드', 한글모드 ? '1' : '0'); }catch(e){}
-  알림(한글모드
-    ? '한글 입력을 켰습니다. 키보드가 영어 상태여도 한글로 들어갑니다.'
-    : '한글 입력을 껐습니다. 키보드의 한/영 키로 입력하세요.');
-}
-
-// 한글을 적는 칸들에만 이 처리를 붙임 (숫자칸에는 붙이지 않음)
-['f_name','f_place','f_detail','f_memo','f_training','f_search'].forEach(id => {
-  const 칸 = $(id);
-  if (!칸) return;
-  칸.addEventListener('keydown', 한글키처리);
-  칸.addEventListener('blur', 조립끝);   // 다른 칸으로 옮기면 조립 끝
-});
-
-// 지난번에 켜 두셨으면 이번에도 켜진 채로 시작
-(function 한글모드복원(){
-  let 저장값 = null;
-  try{ 저장값 = localStorage.getItem('한글모드'); }catch(e){}
-  if (저장값 === '1') 한글모드토글();
-})();
 
 // ===================================================================
 // 9) Enter 키로 다음 칸 이동
 // ===================================================================
-// 구분은 이제 버튼으로 고르므로(타이핑/탭 대상이 아님) 이 목록에서 뺐고,
-// 나머지는 화면에 보이는 순서(성명 → 날짜 → 시간 → 노선 → 민원접수처 → 차량번호 → 금액 → 장소 → 위반내용 → 개인차량번호 → 메모)대로 둠
-const 입력순서 = ['f_name','f_yy','f_mm','f_dd','f_hh','f_mi','f_route_from','f_route','f_office','f_car','f_amount','f_place','f_detail','f_personalcar','f_personalphone','f_training','f_memo'];
+const 입력순서 = ['f_yy','f_mm','f_dd','f_hh','f_mi','f_name','f_gubun','f_route','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_memo'];
 
 function 보이는가(id){
   let 노드 = $(id);
@@ -1361,9 +939,6 @@ function 다음칸으로(현재id){
 // 처음 화면을 한 번 그려둠
 그리기();
 로스터그리기();
-// 처음에는 아무 구분도 고르지 않은 상태이므로, 아래 입력칸들을 모두 숨겨 둡니다
-// (구분 버튼을 눌러야 그 구분에 맞는 칸들이 나타납니다)
-구분바뀜();
 </script>
 </body>
 </html>
