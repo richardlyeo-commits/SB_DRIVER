@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-02
+  버전 : v20261124-03
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-02 = 2026년 11월 24일에 두 번째로 고친 버전)
+   예) v20261124-03 = 2026년 11월 24일에 세 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -77,6 +77,8 @@
   input:disabled, select:disabled{ background:#f1f1f4; color:#999; }
 
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  /* 한 줄에 두 칸을 두었는데 한쪽이 숨겨졌을 때, 남은 한 칸을 한 줄 전체로 넓힘 */
+  .row2.solo{ grid-template-columns:1fr; }
   .hidden{ display:none !important; }
 
   .seg{ display:flex; align-items:center; gap:5px; }
@@ -164,7 +166,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-02</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-03</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -209,7 +211,7 @@
 
     <!-- 성명 : 구분을 고른 바로 다음, "누구에 대한 기록인지"부터 적습니다 -->
     <label>성명 <span class="hint">필수</span></label>
-    <input type="text" id="f_name" placeholder="예: 홍길동">
+    <input type="text" id="f_name" lang="ko" placeholder="예: 홍길동">
 
     <div class="row2">
       <div>
@@ -266,31 +268,34 @@
       </div>
     </div>
 
-    <!-- 사건류 전용 칸 (전입/전출/노선이동일 때는 자동으로 숨김) -->
+    <!-- 사건류 전용 칸.
+         이제는 "사건류냐 아니냐"로 통째로 숨기는 게 아니라, 아래 자바스크립트의
+         '구분설정' 표에 따라 칸 하나하나(차량번호/금액/장소/내용)를
+         구분별로 따로따로 보이거나 숨깁니다. -->
     <div id="wrap_event">
-      <!-- 차량번호 + 금액 : 둘 다 짧은 숫자 입력칸이라 한 줄에 나란히 -->
+      <!-- 차량번호 + 금액 -->
       <div class="row2">
-        <div>
+        <div id="wrap_car">
           <label>차량번호 <span class="hint">뒤 4자리</span></label>
           <input type="text" id="f_car" maxlength="4" inputmode="numeric" placeholder="예: 1194">
         </div>
-        <div>
-          <label>금액(원) <span class="hint">숫자만</span></label>
+        <div id="wrap_amount">
+          <label id="amount_label">금액(원) <span class="hint">숫자만</span></label>
           <input type="text" id="f_amount" inputmode="numeric" placeholder="예: 70000">
         </div>
       </div>
 
-      <!-- 장소 + 위반 내용 : 사건류일 땐 둘 다 항상 같이 보이는 짝이라 한 줄로 -->
+      <!-- 장소 + 내용 (내용 칸의 이름은 구분에 따라 '사고 내용/위반 내용/민원 내용…'으로 바뀜) -->
       <div class="row2">
-        <div>
-          <label>장소 <span class="hint">사건류만 필수</span>
+        <div id="wrap_place">
+          <label>장소 <span class="hint">필수</span>
             <a href="#" id="map_link" onclick="지도보기(); return false;">🗺️ 지도</a>
           </label>
-          <input type="text" id="f_place" placeholder="예: 부곡주민센터 사거리">
+          <input type="text" id="f_place" lang="ko" placeholder="예: 부곡주민센터 사거리">
         </div>
-        <div>
-          <label>위반 내용</label>
-          <input type="text" id="f_detail" placeholder="예: 신호위반">
+        <div id="wrap_detail">
+          <label id="detail_label">위반 내용</label>
+          <input type="text" id="f_detail" lang="ko" placeholder="예: 신호위반">
         </div>
       </div>
     </div>
@@ -308,11 +313,11 @@
         </div>
       </div>
       <label>견습 내용 <span class="hint">전입일 때만</span></label>
-      <textarea id="f_training" rows="2" placeholder="예: 11/24~11/28 5번 노선 동승교육"></textarea>
+      <textarea id="f_training" lang="ko" rows="2" placeholder="예: 11/24~11/28 5번 노선 동승교육"></textarea>
     </div>
 
     <label>메모</label>
-    <textarea id="f_memo" rows="2" placeholder="자유롭게 적기"></textarea>
+    <textarea id="f_memo" lang="ko" rows="2" placeholder="자유롭게 적기"></textarea>
 
     <div id="warnbox" class="warn hidden"></div>
 
@@ -328,7 +333,7 @@
     <div class="sub" style="margin:0 0 10px 0;">
       이름을 입력하면 그 기사의 현재 노선과, 지금까지 쌓인 사건·민원·인사이동 이력을 한 번에 모아 보여줍니다.
     </div>
-    <input type="text" id="f_search" placeholder="기사 이름을 입력하세요">
+    <input type="text" id="f_search" lang="ko" placeholder="기사 이름을 입력하세요">
     <div id="search_result"></div>
   </div>
 
@@ -414,7 +419,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-02)
+   기사 사건·전입전출 입력 도구 (v20261124-03)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -554,20 +559,84 @@ function 구분선택(값){
   구분바뀜();
 }
 
+/* ===== 구분별 입력폼 설정표 =====
+   버튼(구분)마다 "어떤 칸을 보여줄지"와 "칸 이름을 뭐라고 부를지"를
+   여기 한 곳에 모아 적어 둡니다. 나중에 칸을 더하거나 빼고 싶으면
+   아래 표의 true/false 만 고치면 되고, 다른 코드는 건드릴 필요가 없습니다.
+     시간/노선/차량/금액/접수처/장소/내용  : 그 칸을 보여줄지 (true=보임)
+     노선필수                              : 노선을 꼭 골라야 하는지
+     내용라벨 / 내용예시                   : '내용' 칸의 이름과 예시 글씨
+     전입칸                                : 개인차량·전화·견습 칸을 보여줄지 */
+const 구분설정 = {
+  '사고':     { 시간:true,  노선:true,  차량:true,  금액:false, 접수처:false, 장소:true,  내용:true,
+                노선필수:false, 내용라벨:'사고 내용', 내용예시:'예: 후진 중 접촉', 전입칸:false },
+  '과태료':   { 시간:true,  노선:true,  차량:true,  금액:true,  접수처:false, 장소:true,  내용:true,
+                노선필수:false, 내용라벨:'위반 내용', 내용예시:'예: 신호위반',    전입칸:false },
+  '민원':     { 시간:true,  노선:true,  차량:true,  금액:false, 접수처:true,  장소:true,  내용:true,
+                노선필수:false, 내용라벨:'민원 내용', 내용예시:'예: 불친절',      전입칸:false },
+  '차량고장': { 시간:true,  노선:true,  차량:true,  금액:false, 접수처:false, 장소:true,  내용:true,
+                노선필수:false, 내용라벨:'고장 내용', 내용예시:'예: 에어 누설',   전입칸:false },
+  '기타':     { 시간:true,  노선:true,  차량:true,  금액:true,  접수처:false, 장소:true,  내용:true,
+                노선필수:false, 내용라벨:'내용',      내용예시:'자유롭게 적기',   전입칸:false },
+  '전입':     { 시간:false, 노선:true,  차량:false, 금액:false, 접수처:false, 장소:false, 내용:false,
+                노선필수:true,  전입칸:true },
+  '전출':     { 시간:false, 노선:false, 차량:false, 금액:false, 접수처:false, 장소:false, 내용:false,
+                노선필수:false, 전입칸:false },
+  '노선이동': { 시간:false, 노선:true,  차량:false, 금액:false, 접수처:false, 장소:false, 내용:false,
+                노선필수:true,  전입칸:false },
+};
+
+// 아직 아무 구분도 안 고른 상태(처음 화면)에서는 모든 칸을 숨겨 둡니다
+const 빈설정 = { 시간:false, 노선:false, 차량:false, 금액:false, 접수처:false,
+                 장소:false, 내용:false, 노선필수:false, 전입칸:false };
+
+// 지금 고른 구분에 맞는 설정을 돌려줌
+function 지금설정(){
+  return 구분설정[$('f_gubun').value] || 빈설정;
+}
+
 function 구분바뀜(){
-  const 구분 = $('f_gubun').value;
-  const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
+  const s = 지금설정();
 
-  // 사건 전용 칸(차량번호·민원접수처·장소·위반내용·금액, 시간)은 인사이동류면 숨김
-  $('wrap_event').classList.toggle('hidden', 인사이동);
-  $('wrap_time').classList.toggle('hidden', 인사이동);
+  // 1) 설정표대로 칸을 하나씩 보이거나 숨김 (hidden 이라는 이름표를 붙였다 뗐다 함)
+  $('wrap_time').classList.toggle('hidden',        !s.시간);
+  $('wrap_route').classList.toggle('hidden',       !s.노선);
+  $('wrap_minwon').classList.toggle('hidden',      !s.접수처);
+  $('wrap_car').classList.toggle('hidden',         !s.차량);
+  $('wrap_amount').classList.toggle('hidden',      !s.금액);
+  $('wrap_place').classList.toggle('hidden',       !s.장소);
+  $('wrap_detail').classList.toggle('hidden',      !s.내용);
+  $('wrap_personal_car').classList.toggle('hidden',!s.전입칸);
+  // 차량·금액·장소·내용이 전부 숨겨지면 그 묶음 자체도 숨김
+  $('wrap_event').classList.toggle('hidden', !(s.차량 || s.금액 || s.장소 || s.내용));
 
-  // 노선 칸: 전출만 숨김 (전출은 명단에서 빼기만 하면 되므로 노선이 필요 없음)
-  $('wrap_route').classList.toggle('hidden', 구분 === '전출');
-  $('route_hint').textContent = (구분 === '전입' || 구분 === '노선이동') ? '필수' : '사건류는 참고용';
+  // 2) 칸 이름(라벨)과 예시 글씨를 구분에 맞게 바꿈
+  $('route_hint').textContent = s.노선필수 ? '필수' : '참고용';
+  if (s.내용){
+    $('detail_label').textContent = s.내용라벨;
+    $('f_detail').placeholder = s.내용예시;
+  }
 
-  $('wrap_personal_car').classList.toggle('hidden', 구분 !== '전입');
-  $('wrap_minwon').classList.toggle('hidden', 구분 !== '민원');
+  // 3) 숨겨진 칸에 예전 값이 남아 있으면 지움 (엉뚱한 값이 같이 저장되는 것 방지)
+  if (!s.시간){ $('f_hh').value = ''; $('f_mi').value = ''; }
+  if (!s.노선)   $('f_route').value = '';
+  if (!s.접수처) $('f_office').value = '';
+  if (!s.차량)   $('f_car').value = '';
+  if (!s.금액)   $('f_amount').value = '';
+  if (!s.장소)   $('f_place').value = '';
+  if (!s.내용)   $('f_detail').value = '';
+  if (!s.전입칸){ $('f_personalcar').value = ''; $('f_personalphone').value = ''; $('f_training').value = ''; }
+
+  // 4) 한 줄에 둘씩 놓은 묶음 중, 한쪽만 보이면 그 칸을 한 줄 전체로 넓혀 줌
+  줄정리();
+}
+
+// 가로로 둘씩 묶어 둔 줄(.row2) 중에서 한 칸만 보이는 줄은 한 칸짜리 줄로 바꿈
+function 줄정리(){
+  document.querySelectorAll('.row2').forEach(줄 => {
+    const 보이는칸 = Array.from(줄.children).filter(칸 => !칸.classList.contains('hidden'));
+    줄.classList.toggle('solo', 보이는칸.length === 1);
+  });
 }
 
 function 비었나(값){ return !값 || String(값).trim() === ''; }
@@ -590,6 +659,7 @@ function 저장하기(){
   const 메모 = $('f_memo').value.trim();
 
   const 인사이동 = (구분 === '전입' || 구분 === '전출' || 구분 === '노선이동');
+  const s = 지금설정();   // 지금 고른 구분의 설정(어떤 칸이 보이는지)
   let 빠짐 = [];
 
   const 날짜결과 = 날짜값가져오기();
@@ -601,13 +671,14 @@ function 저장하기(){
   if (비었나(성명)) 빠짐.push('성명');
   if (비었나(구분)) 빠짐.push('구분');
 
-  if (!인사이동){
+  // 화면에 보이는 칸만 "필수"로 검사합니다 (숨겨진 칸은 검사하지 않음)
+  if (s.시간){
     if (시간결과.empty) 빠짐.push('시간');
     else if (!시간결과.ok) 빠짐.push('시간(시·분 두 자리씩)');
-    if (비었나(장소)) 빠짐.push('장소');
-    if (구분 === '민원' && 비었나(접수처)) 빠짐.push('민원 접수처');
   }
-  if ((구분 === '전입' || 구분 === '노선이동') && 비었나(노선)) 빠짐.push('노선');
+  if (s.장소 && 비었나(장소)) 빠짐.push('장소');
+  if (s.접수처 && 비었나(접수처)) 빠짐.push('민원 접수처');
+  if (s.노선필수 && 비었나(노선)) 빠짐.push('노선');
   if (!비었나(차량) && !/^\d{4}$/.test(차량)) 빠짐.push('차량번호(숫자 4자리)');
   if (!비었나(금액) && !/^\d+$/.test(금액)) 빠짐.push('금액(숫자만)');
 
@@ -990,6 +1061,9 @@ function 다음칸으로(현재id){
 // 처음 화면을 한 번 그려둠
 그리기();
 로스터그리기();
+// 처음에는 아무 구분도 고르지 않은 상태이므로, 아래 입력칸들을 모두 숨겨 둡니다
+// (구분 버튼을 눌러야 그 구분에 맞는 칸들이 나타납니다)
+구분바뀜();
 </script>
 </body>
 </html>
