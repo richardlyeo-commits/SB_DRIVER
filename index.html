@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-06
+  버전 : v20261124-07
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-06 = 2026년 11월 24일에 여섯 번째로 고친 버전)
+   예) v20261124-07 = 2026년 11월 24일에 일곱 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -128,6 +128,12 @@
   .route-body .person{ display:flex; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px dashed #eee; }
   .route-body .person:last-child{ border-bottom:none; }
   .route-body .person .idx{ color:var(--muted); width:22px; flex:none; }
+  /* ===== 수정 중 안내 띠 ===== */
+  .editbar{
+    background:#fff7ed; border:1.5px solid #fdba74; color:#9a3412;
+    border-radius:11px; padding:10px 12px; font-size:12.5px; margin:10px 0 0 0;
+  }
+
   /* ===== 한글 입력 켜기/끄기 단추 ===== */
   .han-toggle{
     background:#eceef5; color:#555; padding:10px 16px; border-radius:999px;
@@ -173,7 +179,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-06</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-07</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -354,8 +360,14 @@
 
     <div id="warnbox" class="warn hidden"></div>
 
+    <!-- 저장된 기록을 고치는 중일 때만 나타나는 안내 띠 -->
+    <div id="editbar" class="editbar hidden">
+      ✏️ <b>저장된 기록을 고치는 중</b>입니다. 고친 뒤 [수정 저장]을 누르세요.
+      <button class="small-btn" style="margin-left:6px" onclick="수정취소()">수정 취소</button>
+    </div>
+
     <div class="btnbar">
-      <button class="btn-main" onclick="저장하기()">추가</button>
+      <button class="btn-main" id="save_btn" onclick="저장하기()">추가</button>
       <button class="btn-reset" onclick="폼비우기(true)">입력칸 비우기</button>
     </div>
   </div>
@@ -452,7 +464,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-06)
+   기사 사건·전입전출 입력 도구 (v20261124-07)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -478,11 +490,14 @@ let 전입목록 = [];
 let 로스터목록 = [];     // { id, 성명, 노선 }
 let db = null;
 let db사용가능 = false;
+/* 지금 어떤 기록을 고치고 있는지 기억해 두는 곳.
+   null 이면 "새로 추가하는 중", 값이 있으면 "저장된 것을 고치는 중" 입니다. */
+let 수정중 = null;     // { 종류:'event'|'move', id:'...', created:숫자 }
 
 // ===================================================================
 // 1) 공용 저장소(db) 연결
 // ===================================================================
-/* [중요한 수정 - v20261124-06]
+/* [중요한 수정 - v20261124-07]
    예전 코드는 화면이 열리자마자 window.claude 가 있는지 딱 한 번만 확인했습니다.
    그런데 이 저장소 연결 통로(window.claude)는 화면이 그려진 "조금 뒤"에
    만들어집니다. 그래서 늘 "없다"고 판단해 버리고, 입력한 내용이 전부
@@ -823,25 +838,45 @@ function 저장하기(){
       개인차량: (구분==='전입' ? 개인차량 : ''),
       개인전화: (구분==='전입' ? 개인전화 : ''),
       견습내용: (구분==='전입' ? 견습내용 : ''),
-      메모, created: Date.now()
+      메모,
+      // 고치는 중이면 원래 만든 시각을 그대로 두어 목록 순서가 뒤바뀌지 않게 함
+      created: 수정중 ? 수정중.created : Date.now()
     };
-    목록추가('move', 기록);
+    if (수정중) 수정저장('move', 수정중.id, 기록);
+    else        목록추가('move', 기록);
   } else {
     const 기록 = {
       발생일시: `${날짜} ${시간}`, 성명, 노선, 차량, 구분,
-      접수처: (구분==='민원' ? 접수처 : ''), 장소, 위반, 금액, 메모, created: Date.now()
+      접수처: (구분==='민원' ? 접수처 : ''), 장소, 위반, 금액, 메모,
+      created: 수정중 ? 수정중.created : Date.now()
     };
-    목록추가('event', 기록);
+    if (수정중) 수정저장('event', 수정중.id, 기록);
+    else        목록추가('event', 기록);
   }
 
   // ----- 명단(로스터) 자동 갱신 -----
-  if (구분 === '전입' || 구분 === '노선이동'){
-    로스터_추가수정(성명, 노선);
-  } else if (구분 === '전출'){
-    로스터_삭제(성명);
+  // 새로 추가할 때만 명단을 자동으로 바꿉니다.
+  // 이미 저장된 기록을 고치는 경우에는 건드리지 않습니다 — 예전 내용으로
+  // 바뀌었던 명단을 거꾸로 되돌리려면 경우의 수가 너무 많아 잘못 고칠 위험이
+  // 크기 때문입니다. 이름이나 노선을 고치셨다면 아래 '노선별 기사 명단'에서
+  // 직접 확인해 주세요 (고칠 때 화면에도 안내가 나옵니다).
+  if (!수정중){
+    if (구분 === '전입' || 구분 === '노선이동'){
+      로스터_추가수정(성명, 노선);
+    } else if (구분 === '전출'){
+      로스터_삭제(성명);
+    }
   }
 
-  알림('추가되었습니다. 계속 입력하거나 "전체 복사" 후 엑셀에 붙여넣으세요.');
+  if (수정중){
+    const 인사였나 = 인사이동;
+    수정중 = null;
+    알림(인사였나
+      ? '수정했습니다. 명단은 자동으로 바뀌지 않으니 아래 명단도 확인해 주세요.'
+      : '수정했습니다.');
+  } else {
+    알림('추가되었습니다. 계속 입력하거나 "전체 복사" 후 엑셀에 붙여넣으세요.');
+  }
   폼비우기(false);
 }
 
@@ -866,6 +901,11 @@ function 목록추가(종류, 기록){
 }
 
 function 폼비우기(알려줄지){
+  // 고치는 중이었다면 그 상태도 함께 풀어 줍니다 (단추 글씨를 '추가'로 되돌림)
+  수정중 = null;
+  $('editbar').classList.add('hidden');
+  $('save_btn').textContent = '추가';
+
   ['f_hh','f_mi','f_name','f_route','f_route_from','f_car','f_office','f_place','f_detail','f_amount','f_personalcar','f_personalphone','f_training','f_memo']
     .forEach(id => $(id).value = '');
   $('f_gubun').value = '';
@@ -932,11 +972,107 @@ function 그리기_표(종류, 목록, 필드){
   목록.forEach((항목, idx) => {
     html += `<tr><td>${idx+1}</td>`;
     필드.forEach(f => html += `<td>${항목[f] || ''}</td>`);
-    html += `<td><button class="small-btn danger" style="padding:4px 9px;font-size:11px"
-              onclick="한줄삭제('${종류}', '${항목.id}')">삭제</button></td></tr>`;
+    html += `<td style="white-space:nowrap">
+              <button class="small-btn" style="padding:4px 9px;font-size:11px"
+                onclick="한줄수정('${종류}', '${항목.id}')">수정</button>
+              <button class="small-btn danger" style="padding:4px 9px;font-size:11px"
+                onclick="한줄삭제('${종류}', '${항목.id}')">삭제</button></td></tr>`;
   });
   html += '</table>';
   칸.innerHTML = html;
+}
+
+// ===================================================================
+// 5-2) 저장된 기록 고치기
+// ===================================================================
+// 목록의 [수정] 단추를 눌렀을 때
+function 한줄수정(종류, id){
+  const 목록 = (종류 === 'event') ? 사건목록 : 전입목록;
+  const 기록 = 목록.find(x => x.id === id);
+  if (!기록){ 알림('그 기록을 찾지 못했습니다.'); return; }
+
+  // 1) 구분을 먼저 고릅니다.
+  //    (구분을 고르면 그에 맞는 칸만 나타나고 '숨은 칸'은 비워지므로,
+  //     반드시 구분을 먼저 고른 뒤에 값을 채워 넣어야 합니다.)
+  구분선택(기록.구분 || '');
+
+  // 2) 칸을 하나씩 채웁니다
+  if (종류 === 'event'){
+    // 발생일시는 "2026-11-20 14:10" 모양이라 날짜와 시간으로 나눕니다
+    const [날짜부분, 시간부분] = String(기록.발생일시 || '').split(' ');
+    날짜채우기(날짜부분);
+    시간채우기(시간부분);
+    $('f_name').value   = 기록.성명 || '';
+    $('f_route').value  = 기록.노선 || '';
+    $('f_car').value    = 기록.차량 || '';
+    $('f_office').value = 기록.접수처 || '';
+    $('f_place').value  = 기록.장소 || '';
+    $('f_detail').value = 기록.위반 || '';
+    $('f_amount').value = 기록.금액 || '';
+  } else {
+    날짜채우기(기록.날짜);
+    $('f_name').value = 기록.성명 || '';
+    // 노선변경은 "5 → 87" 또는 "→ 87" 모양이라 둘로 나눠 되돌립니다
+    const 조각 = String(기록.노선변경 || '').split('→').map(s => s.trim());
+    if (조각.length === 2){
+      $('f_route_from').value = 조각[0] || '';
+      $('f_route').value      = 조각[1] || '';
+    }
+    $('f_personalcar').value   = 기록.개인차량 || '';
+    $('f_personalphone').value = 기록.개인전화 || '';
+    $('f_training').value      = 기록.견습내용 || '';
+  }
+  $('f_memo').value = 기록.메모 || '';
+
+  // 3) "고치는 중" 상태로 바꿉니다
+  수정중 = { 종류, id, created: 기록.created || Date.now() };
+  $('editbar').classList.remove('hidden');
+  $('save_btn').textContent = '수정 저장';
+  $('warnbox').classList.add('hidden');
+
+  // 4) 입력폼이 화면에 보이도록 위로 올려 줍니다
+  $('save_btn').scrollIntoView({ behavior:'smooth', block:'center' });
+  알림('기록을 입력폼에 불러왔습니다. 고친 뒤 [수정 저장]을 누르세요.');
+}
+
+// "2026-11-20" 을 년/월/일 칸에 나눠 넣기
+function 날짜채우기(iso){
+  if (!iso || iso.length < 10){ return; }
+  $('f_yy').value = iso.slice(2,4);
+  $('f_mm').value = iso.slice(5,7);
+  $('f_dd').value = iso.slice(8,10);
+  날짜미리보기();
+}
+// "14:10" 을 시/분 칸에 나눠 넣기
+function 시간채우기(hhmm){
+  if (!hhmm || hhmm.indexOf(':') < 0) return;
+  $('f_hh').value = hhmm.split(':')[0];
+  $('f_mi').value = hhmm.split(':')[1];
+}
+
+// 고치기를 그만둘 때
+function 수정취소(){
+  수정중 = null;
+  폼비우기(false);
+  알림('수정을 취소했습니다.');
+}
+
+// 고친 내용을 저장소에 덮어쓰기
+function 수정저장(종류, id, 기록){
+  const 컬렉션 = (종류 === 'event') ? 'event_records' : 'move_records';
+  if (db사용가능 && !String(id).startsWith('local-')){
+    try{
+      db.doc(컬렉션 + '/' + id).set(기록).catch(() => {
+        알림('⚠ 수정 내용을 저장하지 못했습니다.');
+      });
+      return;
+    }catch(e){}
+  }
+  // 저장소에 연결이 안 된 상태면 화면 목록에서만 바꿔 줍니다
+  const 바꾸기 = 목록 => 목록.map(x => (x.id === id) ? { id, ...기록 } : x);
+  if (종류 === 'event') 사건목록 = 바꾸기(사건목록);
+  else 전입목록 = 바꾸기(전입목록);
+  그리기();
 }
 
 function 한줄삭제(종류, id){
