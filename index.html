@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-11
+  버전 : v20261124-12
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-11 = 2026년 11월 24일에 열한 번째로 고친 버전)
+   예) v20261124-12 = 2026년 11월 24일에 열두 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -98,7 +98,8 @@
   .btn-reset{ background:#eceef5; color:#444; padding:14px 18px; }
 
   table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
-  th,td{ border-bottom:1px solid var(--border); padding:7px 5px; text-align:left; word-break:break-all; }
+  /* white-space:pre-wrap = 적을 때 넣은 줄바꿈을 목록에서도 그대로 보여 줌 */
+  th,td{ border-bottom:1px solid var(--border); padding:7px 5px; text-align:left; word-break:break-all; white-space:pre-wrap; }
   th{ color:var(--muted); font-weight:600; font-size:11px; }
 
   .toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
@@ -185,7 +186,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-11</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-12</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -357,12 +358,12 @@
           <input type="text" id="f_personalphone" inputmode="tel" placeholder="예: 010-1234-5678">
         </div>
       </div>
-      <label>견습 내용 <span class="hint">전입일 때만</span></label>
-      <textarea id="f_training" lang="ko" rows="2" placeholder="예: 11/24~11/28 5번 노선 동승교육" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+      <label>견습 내용 <span class="hint">전입일 때만 · Enter로 줄바꿈</span></label>
+      <textarea id="f_training" lang="ko" rows="3" placeholder="예: 11/24~11/28 5번 노선 동승교육" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     </div>
 
-    <label>메모</label>
-    <textarea id="f_memo" lang="ko" rows="2" placeholder="자유롭게 적기" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <label>메모 <span class="hint">Enter로 줄바꿈</span></label>
+    <textarea id="f_memo" lang="ko" rows="3" placeholder="자유롭게 적기" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
 
     <div id="warnbox" class="warn hidden"></div>
 
@@ -473,7 +474,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-11)
+   기사 사건·전입전출 입력 도구 (v20261124-12)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -506,7 +507,7 @@ let 수정중 = null;     // { 종류:'event'|'move', id:'...', created:숫자 }
 // ===================================================================
 // 1) 공용 저장소(db) 연결
 // ===================================================================
-/* [중요한 수정 - v20261124-11]
+/* [중요한 수정 - v20261124-12]
    예전 코드는 화면이 열리자마자 window.claude 가 있는지 딱 한 번만 확인했습니다.
    그런데 이 저장소 연결 통로(window.claude)는 화면이 그려진 "조금 뒤"에
    만들어집니다. 그래서 늘 "없다"고 판단해 버리고, 입력한 내용이 전부
@@ -1233,7 +1234,17 @@ function 전체복사(종류){
   const 목록 = (종류 === 'event') ? 사건목록 : 전입목록;
   const 필드 = (종류 === 'event') ? 이벤트필드 : 이동필드;
   if (목록.length === 0){ 알림('복사할 내용이 없습니다.'); return; }
-  const 글자 = 목록.map(항목 => 필드.map(f => 항목[f] || '').join('\t')).join('\n');
+  /* 엑셀로 붙여넣을 글자 만들기.
+     견습 내용·메모에 줄바꿈이 들어갈 수 있는데, 그대로 두면 엑셀이
+     "새로운 줄(새 기록)"로 잘못 알아듣습니다. 그래서 줄바꿈이나 탭,
+     따옴표가 들어 있는 칸은 큰따옴표로 감싸 줍니다.
+     (엑셀은 따옴표로 감싼 칸 안의 줄바꿈을 한 칸 안의 줄바꿈으로 제대로 읽습니다) */
+  const 칸다듬기 = (값) => {
+    const 글 = String(값 == null ? '' : 값);
+    if (/[\n\r\t"]/.test(글)) return '"' + 글.replace(/"/g, '""') + '"';
+    return 글;
+  };
+  const 글자 = 목록.map(항목 => 필드.map(f => 칸다듬기(항목[f])).join('\t')).join('\n');
   navigator.clipboard.writeText(글자).then(()=>{
     알림(목록.length + '건이 복사되었습니다. 엑셀 빈 줄 A칸을 클릭하고 Ctrl+V 하세요.');
   }).catch(()=>{
@@ -1478,7 +1489,7 @@ function 낱자넣기(ㄴㅏㅌ){
 // 조립을 끝내고 더 이상 손대지 않음 (다른 칸으로 가거나 띄어쓰기 했을 때)
 function 조립끝(){ 조립중 = null; }
 
-/* 영문으로 친 글자들을 한글로 바꾸는 방법 (v20261124-11에서 방식 변경)
+/* 영문으로 친 글자들을 한글로 바꾸는 방법 (v20261124-12에서 방식 변경)
 
    예전 방식 : 키를 누르는 순간 가로채서(keydown) 한글로 바꿔 넣기
                -> 브라우저/키보드 종류에 따라 가로채기가 안 먹히는 경우가 있었음
@@ -1507,7 +1518,7 @@ function 로마자를한글로(글){
   return 결과;
 }
 
-/* 쌍자음(ㄲㄸㅃㅆㅉ) 문제 해결 - v20261124-11
+/* 쌍자음(ㄲㄸㅃㅆㅉ) 문제 해결 - v20261124-12
    두벌식에서 쌍자음은 'Shift를 누른 채' 쳐야 나옵니다 (Shift+ㄱ = ㄲ).
    그런데 Shift를 누르지 않았는데도 대문자가 들어오는 경우가 있습니다 :
      - Caps Lock(한글 상태에서는 쌍자음이 되면 안 됨)이 켜져 있을 때
@@ -1617,6 +1628,12 @@ function 한글모드토글(조용히){
 // 나머지는 화면에 보이는 순서(성명 → 날짜 → 시간 → 노선 → 민원접수처 → 차량번호 → 금액 → 장소 → 위반내용 → 개인차량번호 → 메모)대로 둠
 const 입력순서 = ['f_name','f_yy','f_mm','f_dd','f_hh','f_mi','f_route_from','f_route','f_office','f_car','f_amount','f_place','f_detail','f_personalcar','f_personalphone','f_training','f_memo'];
 
+// 여러 줄을 적을 수 있는 칸인지 (견습 내용, 메모처럼 상자 모양인 칸)
+function 여러줄칸(id){
+  const 칸 = $(id);
+  return !!칸 && 칸.tagName === 'TEXTAREA';
+}
+
 function 보이는가(id){
   let 노드 = $(id);
   if (!노드) return false;
@@ -1638,7 +1655,9 @@ function 다음칸으로(현재id){
 입력순서.forEach(id => {
   $(id).addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
-    if (id === 'f_memo' && e.shiftKey) return;
+    // 여러 줄을 적는 칸(견습 내용, 메모)에서는 Enter 를 줄바꿈으로 씁니다.
+    // 다음 칸으로 넘어가려면 Tab 키를 누르시면 됩니다.
+    if (여러줄칸(id)) return;
     e.preventDefault();
     다음칸으로(id);
   });
