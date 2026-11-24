@@ -2,9 +2,9 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-07
+  버전 : v20261124-09
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-07 = 2026년 11월 24일에 일곱 번째로 고친 버전)
+   예) v20261124-09 = 2026년 11월 24일에 아홉 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
@@ -128,6 +128,12 @@
   .route-body .person{ display:flex; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px dashed #eee; }
   .route-body .person:last-child{ border-bottom:none; }
   .route-body .person .idx{ color:var(--muted); width:22px; flex:none; }
+  /* ===== 연결 진단 줄 ===== */
+  .diag{
+    font-size:11px; color:#94a3b8; text-align:center;
+    margin:14px 0 4px 0; word-break:keep-all; line-height:1.5;
+  }
+
   /* ===== 수정 중 안내 띠 ===== */
   .editbar{
     background:#fff7ed; border:1.5px solid #fdba74; color:#9a3412;
@@ -179,7 +185,7 @@
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-07</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-09</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -444,6 +450,9 @@
     <div class="roster-total" id="roster_total"></div>
   </div>
 
+  <!-- 저장소 연결이 어디까지 됐는지 알려주는 줄 (문제가 생겼을 때 원인 찾기용) -->
+  <div id="diag" class="diag">연결 진단 : 시작 전</div>
+
   <div id="toast" class="toast"></div>
 
   <!-- 확인 팝업(모달) : confirm() 대신 화면 안에서 직접 그려서 보여주는 확인창 -->
@@ -464,7 +473,7 @@
 
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-07)
+   기사 사건·전입전출 입력 도구 (v20261124-09)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
      로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
@@ -497,12 +506,57 @@ let 수정중 = null;     // { 종류:'event'|'move', id:'...', created:숫자 }
 // ===================================================================
 // 1) 공용 저장소(db) 연결
 // ===================================================================
-/* [중요한 수정 - v20261124-07]
+/* [중요한 수정 - v20261124-09]
    예전 코드는 화면이 열리자마자 window.claude 가 있는지 딱 한 번만 확인했습니다.
    그런데 이 저장소 연결 통로(window.claude)는 화면이 그려진 "조금 뒤"에
    만들어집니다. 그래서 늘 "없다"고 판단해 버리고, 입력한 내용이 전부
    이 화면 안에만(새로고침하면 사라지는 상태로) 쌓이고 있었습니다.
    => 이제는 통로가 생길 때까지 최대 12초 동안 0.2초 간격으로 기다립니다. */
+/* ===== 안전장치 : 이 브라우저에 따로 한 벌 보관 =====
+   저장소(db) 연결이 안 되더라도 입력한 내용이 사라지지 않도록,
+   이 컴퓨터의 브라우저 안에도 똑같이 한 벌 적어 둡니다.
+   - 새로고침하거나 버전이 바뀌어도 이 내용은 그대로 남습니다.
+   - 나중에 저장소 연결이 되면, 여기 있던 내용을 저장소로 올려 보냅니다.
+   - 단, 이건 '이 컴퓨터 안'에만 있는 것이라 다른 컴퓨터에서는 안 보입니다.
+     (그래서 저장소 연결이 되는 게 여전히 중요합니다) */
+const 보관키 = 'sb_driver_백업_v1';
+
+function 로컬저장(){
+  try{
+    localStorage.setItem(보관키, JSON.stringify({
+      사건목록, 전입목록, 로스터목록, 적은시각: Date.now()
+    }));
+  }catch(e){ /* 브라우저가 막아둔 경우엔 그냥 넘어감 */ }
+}
+
+function 로컬불러오기(){
+  try{
+    const 글 = localStorage.getItem(보관키);
+    if (!글) return false;
+    const 꾸러미 = JSON.parse(글);
+    사건목록   = Array.isArray(꾸러미.사건목록)   ? 꾸러미.사건목록   : [];
+    전입목록   = Array.isArray(꾸러미.전입목록)   ? 꾸러미.전입목록   : [];
+    로스터목록 = Array.isArray(꾸러미.로스터목록) ? 꾸러미.로스터목록 : [];
+    return (사건목록.length + 전입목록.length + 로스터목록.length) > 0;
+  }catch(e){ return false; }
+}
+
+// 저장소가 비어 있는데 이 브라우저에만 내용이 있을 때, 저장소로 올려 보냄
+const 올림완료 = { event:false, move:false, roster:false };
+function 저장소로올리기(컬렉션, 목록, 표시){
+  if (올림완료[표시]) return false;
+  올림완료[표시] = true;
+  try{
+    목록.forEach(항목 => {
+      const 복사본 = Object.assign({}, 항목);
+      delete 복사본.id;                       // 저장소가 새 번호를 붙여 줌
+      db.collection(컬렉션).doc().set(복사본).catch(()=>{});
+    });
+    알림('이 화면에 있던 내용을 저장소로 올렸습니다.');
+    return true;
+  }catch(e){ return false; }
+}
+
 function 저장소통로기다리기(최대초){
   return new Promise(resolve => {
     const 마감 = Date.now() + 최대초 * 1000;
@@ -514,41 +568,70 @@ function 저장소통로기다리기(최대초){
   });
 }
 
+/* 어디까지 진행됐는지 화면 아래에 적어 둡니다.
+   저장소 연결이 안 될 때, 어느 단계에서 막혔는지 알려주시면
+   원인을 찾을 수 있습니다. */
+function 진단적기(글){
+  const 칸 = $('diag');
+  if (칸) 칸.textContent = '연결 진단 : ' + 글;
+}
+
 (async function db연결(){
   동기화상태표시(false, '저장 위치 확인 중…');
+  진단적기('1단계 - 연결 통로를 기다리는 중');
 
   const 통로있음 = await 저장소통로기다리기(12);
   if (!통로있음){
     동기화상태표시(false, '저장소에 연결하지 못했습니다. 이 화면에만 임시 저장됩니다.');
+    진단적기('1단계에서 막힘 - 12초를 기다려도 연결 통로(claude.use)가 생기지 않음');
     return;
   }
+  진단적기('2단계 - 통로를 찾음. 저장소를 여는 중');
 
-  try{ db = await window.claude.use('db'); }catch(e){ db = null; }
+  let 열기오류 = '';
+  try{ db = await window.claude.use('db'); }
+  catch(e){ db = null; 열기오류 = (e && e.message) ? e.message : String(e); }
 
   if (!db){
     동기화상태표시(false, '로그인 상태가 아니라 이 화면에만 임시 저장됩니다.');
+    진단적기('2단계에서 막힘 - 저장소가 열리지 않음' + (열기오류 ? (' / ' + 열기오류) : ' / 오류 없이 비어서 돌아옴'));
     return;
   }
 
   db사용가능 = true;
   동기화상태표시(true, '실시간으로 저장 · 동기화 중');
+  진단적기('연결됨 (정상)');
 
   try{
     db.collection('event_records').onSnapshot((snap) => {
-      사건목록 = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.created||0) - (b.created||0));
+      const 서버목록 = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.created||0) - (b.created||0));
+      // 저장소는 비었는데 이 화면에만 내용이 있으면, 지우지 말고 저장소로 올림
+      if (서버목록.length === 0 && 사건목록.length > 0){
+        if (저장소로올리기('event_records', 사건목록, 'event')) return;
+      }
+      사건목록 = 서버목록;
       그리기();
     });
     db.collection('move_records').onSnapshot((snap) => {
-      전입목록 = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.created||0) - (b.created||0));
+      const 서버목록 = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.created||0) - (b.created||0));
+      if (서버목록.length === 0 && 전입목록.length > 0){
+        if (저장소로올리기('move_records', 전입목록, 'move')) return;
+      }
+      전입목록 = 서버목록;
       그리기();
     });
     db.collection('roster').onSnapshot((snap) => {
-      로스터목록 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const 서버목록 = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (서버목록.length === 0 && 로스터목록.length > 0){
+        if (저장소로올리기('roster', 로스터목록, 'roster')) return;
+      }
+      로스터목록 = 서버목록;
       로스터그리기();
     });
   }catch(e){
     db사용가능 = false;
     동기화상태표시(false, '자동 동기화 연결에 실패했습니다. 이 화면에만 임시 저장됩니다.');
+    진단적기('3단계에서 막힘 - 목록 구독 실패 / ' + ((e && e.message) ? e.message : String(e)));
   }
 })();
 
@@ -923,6 +1006,7 @@ const 이벤트필드 = ['발생일시','성명','노선','차량','구분','접
 const 이동필드   = ['날짜','성명','구분','노선변경','개인차량','개인전화','견습내용','메모'];
 
 function 그리기(){
+  로컬저장();                      // 화면을 다시 그릴 때마다 이 브라우저에도 한 벌 보관
   그리기_표('event', 사건목록, 이벤트필드);
   그리기_표('move',  전입목록, 이동필드);
   통계그리기();
@@ -1220,6 +1304,7 @@ function 로스터_삭제(성명){
 }
 
 function 로스터그리기(){
+  로컬저장();                      // 명단이 바뀔 때도 이 브라우저에 한 벌 보관
   const 칸 = $('roster_list');
   $('cnt_roster').textContent = 로스터목록.length + '명';
   $('roster_total').textContent = '총 ' + 로스터목록.length + '명';
@@ -1433,13 +1518,15 @@ function 한글키처리(e){
 }
 
 // 한글 입력을 켜고 끄는 단추
-function 한글모드토글(){
+// (조용히 = true 로 부르면 안내 쪽지를 띄우지 않습니다. 화면을 처음 열 때 사용)
+function 한글모드토글(조용히){
   한글모드 = !한글모드;
   조립끝();
   const 단추 = $('han_toggle');
   단추.textContent = 한글모드 ? '🇰🇷 한글 입력 : 켜짐' : '🇰🇷 한글 입력 : 꺼짐';
   단추.classList.toggle('on', 한글모드);
   try{ localStorage.setItem('한글모드', 한글모드 ? '1' : '0'); }catch(e){}
+  if (조용히 === true) return;
   알림(한글모드
     ? '한글 입력을 켰습니다. 키보드가 영어 상태여도 한글로 들어갑니다.'
     : '한글 입력을 껐습니다. 키보드의 한/영 키로 입력하세요.');
@@ -1457,7 +1544,9 @@ function 한글모드토글(){
 (function 한글모드복원(){
   let 저장값 = null;
   try{ 저장값 = localStorage.getItem('한글모드'); }catch(e){}
-  if (저장값 === '1') 한글모드토글();
+  // 기본값은 '켜짐'.
+  // 직접 꺼서 '0'이 적혀 있을 때만 꺼진 채로 시작합니다.
+  if (저장값 !== '0') 한글모드토글(true);   // true = 조용히 (안내 쪽지 없이)
 })();
 
 // ===================================================================
@@ -1493,6 +1582,12 @@ function 다음칸으로(현재id){
     다음칸으로(id);
   });
 });
+
+// 이 브라우저에 보관해 둔 내용이 있으면 먼저 불러옴
+// (저장소 연결이 안 되던 동안 입력한 것이 사라지지 않게 하는 안전장치)
+if (로컬불러오기()){
+  알림('이 컴퓨터에 보관돼 있던 내용을 불러왔습니다.');
+}
 
 // 처음 화면을 한 번 그려둠
 그리기();
