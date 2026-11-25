@@ -2,13 +2,17 @@
 <!--
   ===================================================================
   기사 사건·전입전출 입력 도구
-  버전 : v20261124-12
+  버전 : v20261125-01
   (버전 표기 방법 : 날짜 8자리 + 그날의 몇 번째 수정인지 2자리
-   예) v20261124-12 = 2026년 11월 24일에 열두 번째로 고친 버전)
+   예) v20261125-01 = 2026년 11월 25일에 첫 번째로 고친 버전)
 
   이 파일을 열어볼 때, 지금 보고 있는 소스가 몇 번째 버전인지
   한눈에 알 수 있도록 맨 위에 적어둔 것입니다.
   화면(브라우저)에서는 제목 옆 배지에도 같은 버전이 표시됩니다.
+
+  [v20261125-01에서 추가된 것]
+  - 쌓인 기록을 진짜 엑셀 파일(.xlsx)로 바로 다운로드하는 기능
+  - 노선별 기사 명단을 A4 한 장짜리 인쇄 화면으로 보여주는 기능
   ===================================================================
 -->
 <html lang="ko">
@@ -180,13 +184,32 @@
   .modal-box p{ font-size:14px; color:var(--text); line-height:1.6; margin:0 0 16px 0; white-space:pre-line; }
   .modal-btns{ display:flex; gap:10px; }
   .modal-btns button{ flex:1; padding:12px; }
+
+  /* ===== 인쇄 전용 (노선별 명단을 A4 한 장으로 인쇄) =====
+     평소 화면에는 안 보이다가, 인쇄할 때만 다른 모든 것을 숨기고
+     이 부분만 보이도록 만든 영역입니다. */
+  #print_area{ display:none; }
+  @media print{
+    @page{ size:A4 landscape; margin:8mm; }
+    body *{ visibility:hidden; }
+    #print_area, #print_area *{ visibility:visible; }
+    #print_area{ display:block; position:absolute; left:0; top:0; width:100%; }
+  }
+  .print-title{ text-align:center; font-size:22px; font-weight:800; margin-bottom:10px; }
+  .print-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; align-items:start; }
+  .print-block{ border:1px solid #333; break-inside:avoid; }
+  .print-head{ background:#8dc63f; color:#000; font-weight:700; text-align:center; padding:3px 8px; font-size:12px; display:flex; justify-content:space-between; }
+  .print-block table{ width:100%; border-collapse:collapse; font-size:11px; }
+  .print-block td{ border:1px solid #bbb; padding:1px 4px; }
+  .print-block td.seq{ width:20px; color:#555; text-align:center; }
+  .print-total{ text-align:right; font-size:12px; margin-top:8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="topbar">
-    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261124-12</span></h1>
+    <h1>🚌 기사 사건·전입전출 입력 <span class="badge" id="version_badge">v20261125-01</span></h1>
   </div>
   <div class="sync-pill" id="sync_pill" style="margin-bottom:10px;">
     <span class="dot" id="sync_dot"></span><span id="sync_text">저장 위치 확인 중…</span>
@@ -194,7 +217,8 @@
   <div class="sub">
     매크로 보안 경고 없이 입력하는 화면입니다. 입력 후 <b>[추가]</b>를 누르면 목록에 쌓이고,
     로그인된 상태라면 다른 컴퓨터에서 열어도 같은 목록이 자동으로 보입니다.
-    다 적은 뒤 <b>[전체 복사]</b> → 엑셀 빈 줄 A칸에 <b>Ctrl+V</b> 하면 끝입니다.
+    다 적으신 뒤에는 아래쪽 <b>[📊 전체 엑셀 파일 다운로드]</b> 버튼 한 번이면 엑셀 파일이 바로 만들어집니다.
+    (기존에 쓰던 엑셀 양식에 그대로 붙여넣고 싶을 때는 각 목록의 <b>[전체 복사]</b>도 그대로 쓸 수 있습니다.)
   </div>
 
   <!-- ===== 입력 카드 ===== -->
@@ -394,6 +418,7 @@
     <h2><span class="icon">📋</span>사건기록 시트에 붙여넣을 목록</h2>
     <div class="toolbar">
       <button class="small-btn" onclick="전체복사('event')">전체 복사</button>
+      <button class="small-btn" onclick="엑셀다운로드('event')">📊 엑셀 다운로드</button>
       <button class="small-btn danger" onclick="전체삭제('event')">목록 비우기</button>
       <span class="count" id="cnt_event">0건</span>
     </div>
@@ -414,6 +439,7 @@
     <h2><span class="icon">🔄</span>전입전출 시트에 붙여넣을 목록</h2>
     <div class="toolbar">
       <button class="small-btn" onclick="전체복사('move')">전체 복사</button>
+      <button class="small-btn" onclick="엑셀다운로드('move')">📊 엑셀 다운로드</button>
       <button class="small-btn danger" onclick="전체삭제('move')">목록 비우기</button>
       <span class="count" id="cnt_move">0건</span>
     </div>
@@ -451,6 +477,34 @@
     <div class="roster-total" id="roster_total"></div>
   </div>
 
+  <!-- ===== 엑셀 자동 다운로드 ===== -->
+  <div class="card">
+    <h2><span class="icon">📊</span>엑셀 파일로 한 번에 받기</h2>
+    <div class="sub" style="margin:0 0 10px 0;">
+      버튼을 누르면 지금까지 쌓인 <b>사건기록 · 전입전출 · 노선별 명단</b>이
+      탭 3개로 나뉜 진짜 엑셀 파일(.xlsx)로 자동 정리되어 다운로드됩니다.
+    </div>
+    <button class="btn-main" style="width:100%" onclick="엑셀전체다운로드()">📊 전체 엑셀 파일 다운로드 (.xlsx)</button>
+  </div>
+
+  <!-- ===== 노선별 명단 인쇄(A4 한 장) ===== -->
+  <div class="card">
+    <h2><span class="icon">🖨️</span>노선별 명단 인쇄</h2>
+    <div class="sub" style="margin:0 0 10px 0;">
+      제목을 적고 <b>[인쇄하기]</b>를 누르면, 위 노선별 기사 명단을 노선마다 칸으로
+      나눠 A4 용지 한 장에 맞춘 인쇄 화면을 띄워 줍니다.
+      (인쇄 창이 뜨면 용지 방향은 <b>가로</b>로 바꿔 주세요.)
+    </div>
+    <label>인쇄 제목</label>
+    <input type="text" id="f_print_title" lang="ko" value="노선별 기사 명단" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button class="btn-main" style="width:100%;margin-top:12px" onclick="인쇄하기()">🖨️ 인쇄하기</button>
+  </div>
+  <div id="print_area">
+    <div class="print-title" id="print_title_out"></div>
+    <div class="print-grid" id="print_grid"></div>
+    <div class="print-total" id="print_total_out"></div>
+  </div>
+
   <!-- 저장소 연결이 어디까지 됐는지 알려주는 줄 (문제가 생겼을 때 원인 찾기용) -->
   <div id="diag" class="diag">연결 진단 : 시작 전</div>
 
@@ -472,21 +526,27 @@
   </footer>
 </div>
 
+<!-- 엑셀 파일(.xlsx)을 직접 만들어 주는 공개 라이브러리(SheetJS).
+     이 한 줄 덕분에, 아래 '엑셀다운로드' 함수가 진짜 .xlsx 파일을 만들 수 있습니다. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 /* ===================================================================
-   기사 사건·전입전출 입력 도구 (v20261124-12)
+   기사 사건·전입전출 입력 도구 (v20261125-01)
    - 기존 엑셀 매크로(저장 버튼)와 같은 규칙으로 빈칸을 확인합니다.
    - [추가]를 누르면 "Claude 아티팩트 db"라는 공용 저장소에 기록됩니다.
-     로그인한 같은 계정으로 이 화면을 열면, 어느 컴퓨터에서 열어도
-     같은 목록이 자동으로 보입니다.
-   - 이번 버전부터 "노선별 기사 명단"을 함께 관리합니다. 전입/노선이동을
+     로그인한 같은 계정으로 '이 아티팩트 화면(claude.ai/artifact/...)'을 열면,
+     어느 컴퓨터에서 열어도 같은 목록이 자동으로 보입니다.
+     ※ 깃허브(GitHub Pages) 주소로 열면 이 저장소 통로 자체가 없어서
+       기다려도 절대 연결되지 않고, 그 브라우저에만 임시 저장됩니다.
+   - "노선별 기사 명단"을 함께 관리합니다. 전입/노선이동을
      추가하면 그 사람이 해당 노선 명단에 자동으로 들어가고(이미 있으면
      노선만 바뀜), 전출을 추가하면 명단에서 자동으로 빠집니다. 명단은
      항상 이름 가나다순으로 다시 정렬되어 보입니다.
    - db를 쓸 수 없는 상황(로그인 안 됨 등)이면, 이 화면을 쓰는 동안만
      임시로 기억해 두는 방식으로 자동 전환됩니다.
-   - 엑셀 파일 자체를 이 화면이 직접 수정하지는 못합니다. 목록을
-     복사해서 엑셀에 붙여넣는 마지막 한 단계만 손으로 해주시면 됩니다.
+   - [v20261125-01] "📊 엑셀 다운로드" 버튼으로 복사·붙여넣기 없이
+     진짜 엑셀 파일(.xlsx)을 바로 받을 수 있습니다. 또한 "🖨️ 인쇄하기"로
+     노선별 명단을 A4 한 장짜리 인쇄 화면으로 띄울 수 있습니다.
    =================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -1258,6 +1318,66 @@ function 전체복사(종류){
   });
 }
 
+// ===================================================================
+// 7-2) 엑셀 파일(.xlsx)로 자동 다운로드
+// ===================================================================
+/* 위 [전체 복사]는 "글자를 복사해 두는 것"이라, 기존에 쓰던 엑셀 파일을
+   열어 둔 채로 붙여넣어야 완성됩니다. 아래 기능은 그 대신,
+   누르는 즉시 "진짜 엑셀 파일(.xlsx)"을 새로 만들어서 다운로드 폴더에
+   내려받아 줍니다. 엑셀을 따로 열 필요가 없습니다.
+   (브라우저 보안 규칙상 "이미 있는 파일에 자동으로 이어 쓰기"는 할 수
+    없어서, 누를 때마다 그 순간까지 쌓인 내용 전체로 새 파일을 만듭니다.
+    파일 이름에 날짜가 들어가서 예전 파일과 헷갈리지 않습니다.) */
+
+// 제목줄 + 데이터로 엑셀 시트 하나를 만들어 줌
+function 시트만들기(필드, 목록){
+  const 표 = [ 필드, ...목록.map(항목 => 필드.map(f => 항목[f] == null ? '' : 항목[f])) ];
+  return XLSX.utils.aoa_to_sheet(표);
+}
+
+// 파일 이름에 쓸 "오늘 날짜" 글자 (예: 20261125)
+function 오늘날짜글자(){
+  const 오늘 = new Date();
+  return String(오늘.getFullYear()) + String(오늘.getMonth()+1).padStart(2,'0') + String(오늘.getDate()).padStart(2,'0');
+}
+
+// 사건기록 또는 전입전출, 둘 중 하나만 엑셀 파일로 다운로드
+function 엑셀다운로드(종류){
+  const 목록 = (종류 === 'event') ? 사건목록 : 전입목록;
+  const 필드 = (종류 === 'event') ? 이벤트필드 : 이동필드;
+  const 이름 = (종류 === 'event') ? '사건기록' : '전입전출';
+  if (목록.length === 0){ 알림('다운로드할 내용이 없습니다.'); return; }
+  if (typeof XLSX === 'undefined'){ 알림('⚠ 엑셀 기능을 아직 불러오는 중입니다. 잠시 후 다시 눌러주세요.'); return; }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, 시트만들기(필드, 목록), 이름);
+  XLSX.writeFile(wb, `${이름}_${오늘날짜글자()}.xlsx`);
+  알림(이름 + ' 엑셀 파일이 다운로드되었습니다.');
+}
+
+// 사건기록 + 전입전출 + 노선별 명단을, 탭 3개짜리 엑셀 파일 하나로 한 번에 다운로드
+function 엑셀전체다운로드(){
+  if (사건목록.length === 0 && 전입목록.length === 0 && 로스터목록.length === 0){
+    알림('다운로드할 내용이 없습니다.');
+    return;
+  }
+  if (typeof XLSX === 'undefined'){ 알림('⚠ 엑셀 기능을 아직 불러오는 중입니다. 잠시 후 다시 눌러주세요.'); return; }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, 시트만들기(이벤트필드, 사건목록), '사건기록');
+  XLSX.utils.book_append_sheet(wb, 시트만들기(이동필드, 전입목록), '전입전출');
+
+  // 노선별 명단은 '노선 → 이름' 순으로 정렬해서 한 시트에 담음
+  const 명단정렬 = [...로스터목록].sort((a,b) =>
+    String(a.노선||'').localeCompare(String(b.노선||'')) ||
+    String(a.성명||'').localeCompare(String(b.성명||''), 'ko')
+  );
+  XLSX.utils.book_append_sheet(wb, 시트만들기(['노선','성명'], 명단정렬), '노선별명단');
+
+  XLSX.writeFile(wb, `기사사건전입전출_${오늘날짜글자()}.xlsx`);
+  알림('엑셀 파일 1개(탭 3개)가 다운로드되었습니다.');
+}
+
 let 알림타이머;
 function 알림(문구){
   const t = $('toast');
@@ -1340,6 +1460,44 @@ function 로스터그리기(){
     html += `</div></div>`;
   });
   칸.innerHTML = html || '<div class="empty">노선이 지정된 기사가 없습니다.</div>';
+}
+
+// ===================================================================
+// 8-1) 노선별 명단을 A4 한 장짜리 인쇄 화면으로 만들기
+// ===================================================================
+/* 화면에 있는 "노선별 기사 명단" 카드를 그대로 인쇄하면 위아래로 길게
+   잘려서 여러 장이 나옵니다. 그래서 인쇄할 때만 쓰는 별도 영역(#print_area)을
+   만들어서, 노선들을 4칸씩 가로로 나란히 배치해 사진처럼 한 장에
+   들어가도록 했습니다. [인쇄하기]를 누르면 :
+     1) 지금 명단으로 #print_area 안을 채우고
+     2) 브라우저의 인쇄 기능(window.print)을 바로 띄웁니다.
+   인원이 지금(130명 안팎)보다 많이 늘어나면 글씨가 저절로 작아지지는
+   않아서 한 장에 안 들어갈 수도 있습니다. 그럴 땐 인쇄 창에서
+   "배율" 또는 "한 페이지에 맞추기"를 줄여서 골라 주세요. */
+function 인쇄하기(){
+  if (로스터목록.length === 0){ 알림('인쇄할 명단이 없습니다.'); return; }
+
+  $('print_title_out').textContent = $('f_print_title').value.trim() || '노선별 기사 명단';
+
+  let 인쇄html = '';
+  ROUTES.forEach(노선 => {
+    const 사람들 = 로스터목록
+      .filter(x => x.노선 === 노선)
+      .sort((a,b) => a.성명.localeCompare(b.성명, 'ko'));
+    if (사람들.length === 0) return;
+    인쇄html += `<div class="print-block">
+      <div class="print-head"><span>${노선}번</span><span>${사람들.length}명</span></div>
+      <table>`;
+    사람들.forEach((p, idx) => {
+      인쇄html += `<tr><td class="seq">${idx+1}</td><td>${p.성명}</td><td></td></tr>`;
+    });
+    인쇄html += `</table></div>`;
+  });
+  $('print_grid').innerHTML = 인쇄html;
+  $('print_total_out').textContent = '총 ' + 로스터목록.length + '명';
+
+  // 화면에 그려질 시간을 아주 조금 준 뒤 인쇄 창을 띄움
+  setTimeout(() => window.print(), 50);
 }
 
 // 명단 가져오기/수정 패널 열고 닫기 (열 때마다 현재 명단 값으로 칸을 채워 둠)
